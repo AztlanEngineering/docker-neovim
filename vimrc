@@ -53,7 +53,7 @@ set tabstop=2
 set nu "Line numbers
 set numberwidth=3 "gutter
 
-"set backspace=indent,eol,start "Backspace normal behaviour
+set backspace=indent,eol,start "Backspace normal behaviour
 
 set cursorline "Cursor Position
 set cursorcolumn
@@ -82,6 +82,9 @@ au FileType html
 
 "json
 autocmd Filetype json :IndentLinesDisable
+
+"md"
+autocmd Filetype md :IndentLinesDisable
 
 " ——————————————
 " Theme
