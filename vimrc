@@ -49,6 +49,7 @@ set shiftwidth=0    " Use tabstop
 set softtabstop=-1  " Use shiftwidth
 setlocal tabstop=2
 set tabstop=2
+set foldmethod=syntax
 
 set nu "Line numbers
 set numberwidth=3 "gutter
@@ -108,12 +109,13 @@ nnoremap k <C-W><C-K>
 nnoremap l <C-W><C-L> "right
 nnoremap h <C-W><C-H> "left
 
+"Folding with space
+nnoremap <silent> <Space> @=(foldlevel('.')?'za':"\<Space>")<CR>
+
 map <C-H> :bnext<CR> "Buffer nav
 map <C-L> :bprev<CR>
 map <C-K> :bd<CR>
 "map <C-L> :%bd|e#|NERDTree<CR>
-
-nnoremap <bs> Xi "Text fold
 
 " ——————————————
 " Plugins Config
