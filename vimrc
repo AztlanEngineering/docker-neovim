@@ -49,6 +49,7 @@ set shiftwidth=0    " Use tabstop
 set softtabstop=-1  " Use shiftwidth
 setlocal tabstop=2
 set tabstop=2
+set foldmethod=syntax
 
 set nu "Line numbers
 set numberwidth=3 "gutter
@@ -62,23 +63,23 @@ let maplocalleader=","
 
 "Python
 au Filetype *.py
-  \ setlocal tabstop=4 textwidth=79 expandtab autoindent fileformat=unix encoding=utf-8 
+\ setlocal tabstop=4 textwidth=79 expandtab autoindent fileformat=unix encoding=utf-8 
 let python_highlight_all=1
 
 "Js
 au Filetype js,mjs,ts,jsx
-  \ setlocal tabstop=2
+\ setlocal tabstop=2
 autocmd BufWritePost *.js,*.jsx AsyncRun -post=checktime ./node_modules/.bin/eslint --fix %
 
 
 "scss
 au FileType less,css,scss,sass
-  \ setlocal tabstop=2 setlocal iskeyword+=-
+\ setlocal tabstop=2 setlocal iskeyword+=-
 "autocmd BufWritePost *.css,*.less,*.scss,*.sass AsyncRun -post=checktime ./node_modules/.bin/csscomb %
 
 "Html
 au FileType html
-  \ setlocal tabstop=2 
+\ setlocal tabstop=2 
 
 "json
 autocmd Filetype json :IndentLinesDisable
@@ -114,10 +115,11 @@ nnoremap <silent> <Space> @=(foldlevel('.')?'za':"\<Space>")<CR>
 
 map j :bprev<CR>
 map k :bnext<CR>
-map <C-K> :bd<CR>
-"map <C-L> :%bd|e#|NERDTree<CR>
+"Folding with space
+nnoremap <silent> <Space> @=(foldlevel('.')?'za':"\<Space>")<CR>
 
-nnoremap <bs> Xi "Text fold
+"map <C-K> :bd<CR>
+"map <C-L> :%bd|e#|NERDTree<CR>
 
 " ——————————————
 " Plugins Config
