@@ -53,7 +53,7 @@ set tabstop=2
 set nu "Line numbers
 set numberwidth=3 "gutter
 
-"set backspace=indent,eol,start "Backspace normal behaviour
+set backspace=indent,eol,start "Backspace normal behaviour
 
 set cursorline "Cursor Position
 set cursorcolumn
@@ -83,6 +83,9 @@ au FileType html
 "json
 autocmd Filetype json :IndentLinesDisable
 
+"md"
+autocmd Filetype md :IndentLinesDisable
+
 " ——————————————
 " Theme
 " ——————————————
@@ -100,13 +103,17 @@ highlight! link NERDTreeFlags NERDTreeDir
 " Keyboard Mappings
 " ——————————————
 
-nnoremap j <C-W><C-J> 
-nnoremap k <C-W><C-K>
-nnoremap l <C-W><C-L> "right
-nnoremap h <C-W><C-H> "left
+nnoremap <C-J> <C-W><C-J> 
+nnoremap <C-K> <C-W><C-K>
+nnoremap l <C-W><C-L>
+nnoremap h <C-W><C-H>
 
-map <C-H> :bnext<CR> "Buffer nav
-map <C-L> :bprev<CR>
+"Folding with space
+nnoremap <silent> <Space> @=(foldlevel('.')?'za':"\<Space>")<CR>
+"nnoremap <bs> Xi
+
+map j :bprev<CR>
+map k :bnext<CR>
 map <C-K> :bd<CR>
 "map <C-L> :%bd|e#|NERDTree<CR>
 
@@ -119,6 +126,8 @@ nnoremap <bs> Xi "Text fold
 "
 " NERDTree
 "
+
+set hidden "To always open in same tab
 
 autocmd VimEnter * NERDTree | wincmd w "Open on startup and focus
 let NERDTreeShowHidden=1
