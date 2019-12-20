@@ -13,6 +13,7 @@ Plug 'vim-airline/vim-airline'
 Plug 'jiangmiao/auto-pairs'
 Plug 'Yggdroot/indentLine'
 Plug 'junegunn/fzf.vim'
+Plug 'skywind3000/asyncrun.vim'
 
 "Theme
 Plug 'morhetz/gruvbox'
@@ -23,6 +24,7 @@ Plug 'cakebaker/scss-syntax.vim' "scss
 Plug 'hail2u/vim-css3-syntax' "css
 Plug 'jparise/vim-graphql' "graphql
 Plug 'pangloss/vim-javascript' "Javascript
+Plug 'MaxMEllon/vim-jsx-pretty' "jsx
 Plug 'tikhomirov/vim-glsl' "Gl Shader Lang
 Plug 'plasticboy/vim-markdown' "Markdown, Md
 Plug 'ekalinin/Dockerfile.vim' "Dockerfile
@@ -33,8 +35,9 @@ Plug 'ekalinin/Dockerfile.vim' "Dockerfile
 "Various Automation
 Plug 'mattn/emmet-vim' "Html https://medium.com/vim-drops/be-a-html-ninja-with-emmet-for-vim-feee15447ef1
 
-"Linting
-Plug 'dense-analysis/ale'
+"Linting and autocomplete
+Plug 'dense-analysis/ale' "Integrates with eslint/linter_name if eslint/linter_name binary in $PATH. Integrates with deoplete
+Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
 
 
 " Initialize plugin system
@@ -50,6 +53,9 @@ set softtabstop=-1  " Use shiftwidth
 setlocal tabstop=2
 set tabstop=2
 set foldmethod=syntax
+"Enable folding
+set foldmethod=indent
+set foldlevel=99
 
 set nu "Line numbers
 set numberwidth=3 "gutter
@@ -59,7 +65,7 @@ set backspace=indent,eol,start "Backspace normal behaviour
 set cursorline "Cursor Position
 set cursorcolumn
 
-let maplocalleader=","
+let mapleader=","
 
 "Python
 au Filetype *.py
@@ -69,12 +75,12 @@ let python_highlight_all=1
 "Js
 au Filetype js,mjs,ts,jsx
 \ setlocal tabstop=2
-autocmd BufWritePost *.js,*.jsx AsyncRun -post=checktime ./node_modules/.bin/eslint --fix %
+"autocmd BufWritePost *.js,*.jsx AsyncRun -post=checktime ./node_modules/.bin/eslint --fix %
 
 
 "scss
 au FileType less,css,scss,sass
-\ setlocal tabstop=2 setlocal iskeyword+=-
+\ setlocal tabstop=4 iskeyword+=-
 "autocmd BufWritePost *.css,*.less,*.scss,*.sass AsyncRun -post=checktime ./node_modules/.bin/csscomb %
 
 "Html
@@ -118,6 +124,9 @@ map k :bnext<CR>
 "Folding with space
 nnoremap <silent> <Space> @=(foldlevel('.')?'za':"\<Space>")<CR>
 
+nnoremap <leader>t :%s/<tab>/  /g<CR>
+nnoremap <leader>n :NERDTreeToggle<CR>
+
 "map <C-K> :bd<CR>
 "map <C-L> :%bd|e#|NERDTree<CR>
 
@@ -144,8 +153,9 @@ au BufReadPost *.html set syntax=html
 "
 
 nmap ; :Buffers<CR>
-nmap <Leader>t :Files<CR>
-nmap <Leader>r :Tags<CR>
+nmap <Leader>f :Files<CR>
+nmap = :Files<CR>
+nmap <Leader>g :Tags<CR>
 
 "
 " AirlineConfig
@@ -177,10 +187,17 @@ let g:indentLine_char_list = ['|', '¦', '┆', '┊']
 let g:ale_sign_error = '●' " Less aggressive than the default '>>'
 let g:ale_sign_warning = '—'
 let g:ale_lint_on_enter = 1 " Less distracting when opening a new file
-let b:ale_linters = {'javascript': ['eslint']}
+let g:ale_fix_on_save = 1 " Set this variable to 1 to fix files when you save them
+let b:ale_linters = {'javascript': ['eslint'], 'scss':['stylelint']}
+let g:ale_fixers = {'javascript': ['eslint'], 'scss':['stylelint']}
 let g:airline#extensions#ale#enabled = 1
 
+"
+" Deoplete.
+"
+let g:deoplete#enable_at_startup = 1
 
-
+" <TAB>: completion.
+inoremap <expr><TAB>  pumvisible() ? "\<C-n>" : "\<TAB>"
 
 
