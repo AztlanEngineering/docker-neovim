@@ -126,7 +126,7 @@ nnoremap h <C-W><C-H>
 
 "Folding with space
 nnoremap <silent> <Space> @=(foldlevel('.')?'za':"\<Space>")<CR>
-"nnoremap <bs> Xi
+nnoremap <bs> Xi
 
 map j :bprev<CR>
 map k :bnext<CR>
@@ -152,6 +152,8 @@ noremap { {<C-L>
 "
 
 set hidden "To always open in same tab
+
+let g:NERDTreeWinSize=22
 
 autocmd VimEnter * NERDTree | wincmd w "Open on startup and focus
 let NERDTreeShowHidden=1
