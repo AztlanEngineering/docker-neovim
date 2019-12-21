@@ -13,7 +13,7 @@ Plug 'vim-airline/vim-airline'
 Plug 'jiangmiao/auto-pairs'
 Plug 'Yggdroot/indentLine'
 Plug 'junegunn/fzf.vim'
-Plug 'skywind3000/asyncrun.vim'
+"Plug 'skywind3000/asyncrun.vim'
 
 "Theme
 Plug 'morhetz/gruvbox'
@@ -66,6 +66,15 @@ set cursorline "Cursor Position
 set cursorcolumn
 
 let mapleader=","
+
+
+"THIS IS A TEST !!
+" Disable Background Color Erase (BCE) so that color schemes
+" render properly when inside 256-color tmux and GNU screen.
+if &term =~ '256color'
+    set t_ut=
+endif
+
 
 "Python
 au Filetype *.py
@@ -129,6 +138,10 @@ nnoremap <leader>n :NERDTreeToggle<CR>
 
 "map <C-K> :bd<CR>
 "map <C-L> :%bd|e#|NERDTree<CR>
+
+"Fix the scroll bug, force redraw
+noremap } }<C-L>
+noremap { {<C-L>
 
 " ——————————————
 " Plugins Config
