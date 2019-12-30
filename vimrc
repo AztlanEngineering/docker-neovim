@@ -24,6 +24,7 @@ Plug 'cakebaker/scss-syntax.vim' "scss
 Plug 'hail2u/vim-css3-syntax' "css
 Plug 'jparise/vim-graphql' "graphql
 Plug 'pangloss/vim-javascript' "Javascript
+Plug 'jxnblk/vim-mdx-js'"Mdx, for storybook docs, experimental module
 Plug 'MaxMEllon/vim-jsx-pretty' "jsx
 Plug 'tikhomirov/vim-glsl' "Gl Shader Lang
 Plug 'plasticboy/vim-markdown' "Markdown, Md
@@ -50,12 +51,14 @@ call plug#end()
 syntax on
 set shiftwidth=0    " Use tabstop
 set softtabstop=-1  " Use shiftwidth
+set expandtab "Tabs to spaces
 setlocal tabstop=2
 set tabstop=2
 set foldmethod=syntax
 "Enable folding
 set foldmethod=indent
 set foldlevel=99
+set conceallevel=0
 
 set nu "Line numbers
 set numberwidth=3 "gutter
@@ -89,7 +92,7 @@ au Filetype js,mjs,ts,jsx
 
 "scss
 au FileType less,css,scss,sass
-\ setlocal tabstop=4 iskeyword+=-
+\ setlocal tabstop=2 iskeyword+=-
 "autocmd BufWritePost *.css,*.less,*.scss,*.sass AsyncRun -post=checktime ./node_modules/.bin/csscomb %
 
 "Html
@@ -124,6 +127,22 @@ nnoremap <C-K> <C-W><C-K>
 nnoremap l <C-W><C-L>
 nnoremap h <C-W><C-H>
 
+nnoremap <leader>r <C-W>r
+nnoremap <leader>R <C-W>R
+
+"split
+nnoremap <leader>v <C-W>v
+
+"reload
+nnoremap <leader>e :e!<CR>
+
+"toggle line number
+nnoremap <leader>l :set number!<CR>
+
+noremap <leader><Space> :w<CR>
+noremap <leader>q :q!<CR>
+noremap <leader>b :bd!<CR>
+
 "Folding with space
 nnoremap <silent> <Space> @=(foldlevel('.')?'za':"\<Space>")<CR>
 nnoremap <bs> Xi
@@ -133,7 +152,8 @@ map k :bnext<CR>
 "Folding with space
 nnoremap <silent> <Space> @=(foldlevel('.')?'za':"\<Space>")<CR>
 
-nnoremap <leader>t :%s/<tab>/  /g<CR>
+noremap <leader>t :retab<CR>
+"nnoremap <leader>t :%s/<tab>/  /g<CR>
 nnoremap <leader>n :NERDTreeToggle<CR>
 
 "map <C-K> :bd<CR>
@@ -142,6 +162,9 @@ nnoremap <leader>n :NERDTreeToggle<CR>
 "Fix the scroll bug, force redraw
 noremap } }<C-L>
 noremap { {<C-L>
+
+"https://vim.fandom.com/wiki/Search_for_visually_selected_text
+"vnoremap // y/\V<C-R>=escape(@",'/\')<CR><CR>
 
 " ——————————————
 " Plugins Config
@@ -168,7 +191,6 @@ au BufReadPost *.html set syntax=html
 "
 
 nmap ; :Buffers<CR>
-nmap <Leader>f :Files<CR>
 nmap = :Files<CR>
 nmap <Leader>g :Tags<CR>
 
@@ -194,9 +216,8 @@ let g:user_emmet_leader_key=','
 " indentLine
 "
 
-let g:indentLine_char_list = ['|', '¦', '┆', '┊']
-
-"
+"let g:indentLine_char_list = ['|', '¦', '┆', '┊']
+let g:indentLine_char_list = ['|'] "For easier processing of terminal copy and paste
 " Linting
 "
 let g:ale_sign_error = '●' " Less aggressive than the default '>>'
