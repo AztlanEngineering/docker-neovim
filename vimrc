@@ -70,6 +70,11 @@ set cursorcolumn
 
 let mapleader=","
 
+" Mouse mode, cf https://unix.stackexchange.com/questions/50733/cant-use-mouse-properly-when-running-vim-in-tmux
+if !has('nvim')
+  set ttymouse=xterm2
+endif
+set mouse=a
 
 "THIS IS A TEST !!
 " Disable Background Color Erase (BCE) so that color schemes
@@ -103,7 +108,9 @@ au FileType html
 autocmd Filetype json :IndentLinesDisable
 
 "md"
-autocmd Filetype md :IndentLinesDisable
+autocmd Filetype *.md :IndentLinesDisable
+au Filetype *.md 
+\ setlocal conceallevel=0
 
 " ——————————————
 " Theme
