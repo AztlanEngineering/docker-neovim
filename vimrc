@@ -60,7 +60,7 @@ set foldmethod=indent
 set foldlevel=99
 set conceallevel=0
 
-set nu "Line numbers
+set nu rnu "Line numbers, hybrid mode
 set numberwidth=3 "gutter
 
 set backspace=indent,eol,start "Backspace normal behaviour
@@ -145,6 +145,10 @@ nnoremap <leader>e :e!<CR>
 
 "toggle line number
 nnoremap <leader>l :set number!<CR>
+nnoremap <leader>L :set relativenumber!<CR>
+
+"Fix the file in case it doesnt work on save
+nnoremap <leader>f :ALEFix<CR>
 
 noremap <leader><Space> :w<CR>
 noremap <leader>q :q!<CR>
