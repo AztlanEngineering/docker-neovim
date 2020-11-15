@@ -16,8 +16,10 @@ Plug 'junegunn/fzf.vim'
 "Plug 'skywind3000/asyncrun.vim'
 
 "Theme
-Plug 'morhetz/gruvbox'
+"Plug 'morhetz/gruvbox'
 Plug 'ryanoasis/vim-devicons'
+Plug 'cocopon/iceberg.vim'
+Plug 'khatiba/vim-airline-themes'
 
 "Syntax
 Plug 'cakebaker/scss-syntax.vim' "scss
@@ -79,8 +81,14 @@ set mouse=a
 "THIS IS A TEST !!
 " Disable Background Color Erase (BCE) so that color schemes
 " render properly when inside 256-color tmux and GNU screen.
-if &term =~ '256color'
-    set t_ut=
+"if &term =~ '256color'
+"    set t_ut=
+"endif
+"https://vi.stackexchange.com/questions/13458/make-vim-show-all-the-colors
+set termguicolors
+if !has('nvim') && $TERM ==# 'screen-256color'
+  let &t_8f = "\<Esc>[38;2;%lu;%lu;%lum"
+  let &t_8b = "\<Esc>[48;2;%lu;%lu;%lum"
 endif
 
 
@@ -111,13 +119,28 @@ autocmd Filetype json :IndentLinesDisable
 autocmd Filetype *.md :IndentLinesDisable
 au Filetype *.md 
 \ setlocal conceallevel=0
-
+let g:vim_markdown_conceal = 0
+let g:vim_markdown_conceal_code_blocks = 0
+let g:indentLine_fileTypeExclude = ['markdown']
 " ——————————————
 " Theme
 " ——————————————
 
-let g:gruvbox_contrast_dark = 'hard'
-colorscheme gruvbox "Will give an error on docker compilation, normal
+"let g:gruvbox_contrast_dark = 'hard'
+"colorscheme gruvbox "Will give an error on docker compilation, normal
+colorscheme iceberg "Will give an error on docker compilation, normal
+let g:airline_left_sep = ''
+let g:airline_right_sep = ''
+set fillchars+=vert:\ 
+hi VertSplit cterm=NONE ctermbg=NONE ctermfg=NONE gui=NONE guibg=NONE guifg=NONE
+hi Normal guibg=NONE ctermbg=NONE
+hi clear EndOfBuffer
+hi clear NonText
+hi clear LineNr ctermbg=NONE guibg=NONE
+hi clear airline_tabfill
+hi clear airline_a
+hi clear airline_a_inactive
+hi! airline_c ctermbg=NONE guibg=NONE
 autocmd BufRead,BufNewFile * syn match operators /[+\-\|\\\*\;\?\:\,\<\>\&\\!\\~\%\=]/ | hi operators guifg=#fe8019
 autocmd BufRead,BufNewFile * syn match parens /[{}]/ | hi parens guifg=#689d6a
 hi NERDTreeFile guifg=#
@@ -129,8 +152,8 @@ highlight! link NERDTreeFlags NERDTreeDir
 " Keyboard Mappings
 " ——————————————
 
-nnoremap <C-J> <C-W><C-J> 
-nnoremap <C-K> <C-W><C-K>
+nnoremap j <C-W><C-J> 
+nnoremap k <C-W><C-K>
 nnoremap l <C-W><C-L>
 nnoremap h <C-W><C-H>
 
@@ -139,6 +162,7 @@ nnoremap <leader>R <C-W>R
 
 "split
 nnoremap <leader>v <C-W>v
+nnoremap <leader>s <C-W>s
 
 "reload
 nnoremap <leader>e :e!<CR>
@@ -146,6 +170,8 @@ nnoremap <leader>e :e!<CR>
 "toggle line number
 nnoremap <leader>l :set number!<CR>
 nnoremap <leader>L :set relativenumber!<CR>
+
+nnoremap <leader>y :IndentLinesToggle<CR>
 
 "Fix the file in case it doesnt work on save
 nnoremap <leader>f :ALEFix<CR>
@@ -158,8 +184,13 @@ noremap <leader>b :bd!<CR>
 nnoremap <silent> <Space> @=(foldlevel('.')?'za':"\<Space>")<CR>
 nnoremap <bs> Xi
 
-map j :bprev<CR>
-map k :bnext<CR>
+"Mapping the delete key (bug on arch + ssh)
+map <F1> <Del>
+imap <F1> <Del>
+
+"Mapping buffers
+"map j :bprev<CR>
+"map k :bnext<CR>
 "Folding with space
 nnoremap <silent> <Space> @=(foldlevel('.')?'za':"\<Space>")<CR>
 

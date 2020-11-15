@@ -8,8 +8,6 @@ MAINTAINER fwrlines <hello@fwrlines.com>
 
 RUN apk add --no-cache neovim neovim-doc curl git
 
-
-
 RUN mkdir /etc/nvim/
 
 COPY vimrc /etc/nvim/.vimrc
@@ -37,7 +35,6 @@ RUN apk add --no-cache nodejs
 
 #Add path so that we canexec the node modules from vim
 ENV PATH="./node_modules/.bin:$PATH"
-
 #The following is only needed for deoplete
 # — https://github.com/Docker-Hub-frolvlad/docker-alpine-python3/blob/master/Dockerfile
 ENV PYTHONUNBUFFERED=1
