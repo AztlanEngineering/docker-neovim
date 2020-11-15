@@ -12,6 +12,7 @@ Plug 'tpope/vim-fugitive'
 Plug 'vim-airline/vim-airline'
 Plug 'jiangmiao/auto-pairs'
 Plug 'Yggdroot/indentLine'
+Plug 'junegunn/fzf'
 Plug 'junegunn/fzf.vim'
 "Plug 'skywind3000/asyncrun.vim'
 
@@ -19,7 +20,7 @@ Plug 'junegunn/fzf.vim'
 "Plug 'morhetz/gruvbox'
 Plug 'ryanoasis/vim-devicons'
 Plug 'cocopon/iceberg.vim'
-Plug 'khatiba/vim-airline-themes'
+Plug 'vim-airline/vim-airline-themes'
 
 "Syntax
 Plug 'cakebaker/scss-syntax.vim' "scss
@@ -204,6 +205,13 @@ nnoremap <leader>n :NERDTreeToggle<CR>
 "Fix the scroll bug, force redraw
 noremap } }<C-L>
 noremap { {<C-L>
+
+" https://til.hashrocket.com/posts/wa1bvrgjdd-escaping-terminal-mode-in-an-nvim-terminal#:~:text=Try%20hitting%20though%20and,transitioned%20back%20to%20Normal%20mode.
+if has("nvim")
+  au TermOpen * tnoremap <Esc> <c-\><c-n>
+  au FileType fzf tunmap <Esc>
+endif
+
 
 "https://vim.fandom.com/wiki/Search_for_visually_selected_text
 "vnoremap // y/\V<C-R>=escape(@",'/\')<CR><CR>
