@@ -15,6 +15,8 @@ Plug 'Yggdroot/indentLine'
 Plug 'junegunn/fzf'
 Plug 'junegunn/fzf.vim'
 "Plug 'skywind3000/asyncrun.vim'
+Plug 'frazrepo/vim-rainbow' "Matches colors for opening and closing parens
+Plug 'andymass/vim-matchup' "Extend usage of % key
 
 "Theme
 "Plug 'morhetz/gruvbox'
@@ -27,17 +29,20 @@ Plug 'cakebaker/scss-syntax.vim' "scss
 Plug 'hail2u/vim-css3-syntax' "css
 Plug 'jparise/vim-graphql' "graphql
 Plug 'pangloss/vim-javascript' "Javascript
-Plug 'jxnblk/vim-mdx-js'"Mdx, for storybook docs, experimental module
+Plug 'jxnblk/vim-mdx-js' "Mdx, for storybook docs, experimental module
 Plug 'MaxMEllon/vim-jsx-pretty' "jsx
 Plug 'tikhomirov/vim-glsl' "Gl Shader Lang
 Plug 'plasticboy/vim-markdown' "Markdown, Md
 Plug 'ekalinin/Dockerfile.vim' "Dockerfile
 "Plug 'fatih/vim-go' "Go
 "Plug 'derekwyatt/vim-scala' "scala
-"Plug 'leafgarland/typescript-vim "
+Plug 'leafgarland/typescript-vim' "ts syntax
+Plug 'Quramy/tsuquyomi' "tsserver client featuresg
+Plug 'nvie/vim-flake8' "Python 
 
-"Various Automation
+"Various
 Plug 'mattn/emmet-vim' "Html https://medium.com/vim-drops/be-a-html-ninja-with-emmet-for-vim-feee15447ef1
+Plug 'mcantrell/vim-virtualenv' "Detect python venv
 
 "Linting and autocomplete
 Plug 'dense-analysis/ale' "Integrates with eslint/linter_name if eslint/linter_name binary in $PATH. Integrates with deoplete
@@ -286,4 +291,5 @@ let g:deoplete#enable_at_startup = 1
 " <TAB>: completion.
 inoremap <expr><TAB>  pumvisible() ? "\<C-n>" : "\<TAB>"
 
-
+"Vim rainbow 
+let g:rainbow_active = 1

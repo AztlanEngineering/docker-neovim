@@ -6,7 +6,7 @@ FROM alpine:latest
 
 MAINTAINER fwrlines <hello@fwrlines.com>
 
-RUN apk add --no-cache neovim neovim-doc curl git
+RUN apk add --no-cache build-base neovim neovim-doc curl git
 
 RUN mkdir /etc/nvim/
 
@@ -22,7 +22,7 @@ WORKDIR /x/
 
 #Required for vim plugins below
 RUN apk add --no-cache -X http://dl-cdn.alpinelinux.org/alpine/edge/community fzf the_silver_searcher
-RUN apk add --no-cache -X http://dl-cdn.alpinelinux.org/alpine/edge/testing bat
+RUN apk add --no-cache -X http://dl-cdn.alpinelinux.org/alpine/edge/community bat
 RUN apk add --no-cache tidyhtml bash
 ENV FZF_DEFAULT_COMMAND='ag --nocolor -g ""'
 ENV FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
@@ -41,7 +41,8 @@ RUN bat cache --build
 ENV BAT_THEME=iceberg
 
 # We add node to be able to execure JS and Linting binaries
-RUN apk add --no-cache nodejs
+RUN apk add --no-cache nodejs npm
+RUN npm i -g typescript
 
 #Add path so that we canexec the node modules from vim
 ENV PATH="./node_modules/.bin:$PATH"
