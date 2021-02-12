@@ -15,7 +15,7 @@ Plug 'Yggdroot/indentLine'
 Plug 'junegunn/fzf'
 Plug 'junegunn/fzf.vim'
 "Plug 'skywind3000/asyncrun.vim'
-Plug 'frazrepo/vim-rainbow' "Matches colors for opening and closing parens
+"Plug 'frazrepo/vim-rainbow' "Matches colors for opening and closing parens
 Plug 'andymass/vim-matchup' "Extend usage of % key
 
 "Theme
