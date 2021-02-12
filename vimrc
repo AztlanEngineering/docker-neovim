@@ -42,7 +42,7 @@ Plug 'nvie/vim-flake8' "Python
 
 "Various
 Plug 'mattn/emmet-vim' "Html https://medium.com/vim-drops/be-a-html-ninja-with-emmet-for-vim-feee15447ef1
-Plug 'mcantrell/vim-virtualenv' "Detect python venv
+Plug 'jmcantrell/vim-virtualenv' "Detect python venv
 
 "Linting and autocomplete
 Plug 'dense-analysis/ale' "Integrates with eslint/linter_name if eslint/linter_name binary in $PATH. Integrates with deoplete
