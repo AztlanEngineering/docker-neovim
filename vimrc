@@ -37,6 +37,7 @@ Plug 'ekalinin/Dockerfile.vim' "Dockerfile
 "Plug 'fatih/vim-go' "Go
 "Plug 'derekwyatt/vim-scala' "scala
 Plug 'leafgarland/typescript-vim' "ts syntax
+Plug 'peitalin/vim-jsx-typescript' "tsx
 Plug 'Quramy/tsuquyomi' "tsserver client featuresg
 Plug 'nvie/vim-flake8' "Python 
 
@@ -293,3 +294,6 @@ inoremap <expr><TAB>  pumvisible() ? "\<C-n>" : "\<TAB>"
 
 "Vim rainbow 
 let g:rainbow_active = 1
+
+" set filetypes as typescriptreact
+autocmd BufNewFile,BufRead *.tsx,*.jsx set filetype=typescriptreact
