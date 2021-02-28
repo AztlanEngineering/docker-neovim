@@ -40,6 +40,7 @@ Plug 'leafgarland/typescript-vim' "ts syntax
 Plug 'peitalin/vim-jsx-typescript' "tsx
 Plug 'Quramy/tsuquyomi' "tsserver client featuresg
 Plug 'nvie/vim-flake8' "Python 
+Plug 'cespare/vim-toml' "Vim TOML
 
 "Various
 Plug 'mattn/emmet-vim' "Html https://medium.com/vim-drops/be-a-html-ninja-with-emmet-for-vim-feee15447ef1
@@ -280,9 +281,22 @@ let g:ale_sign_error = '●' " Less aggressive than the default '>>'
 let g:ale_sign_warning = '—'
 let g:ale_lint_on_enter = 1 " Less distracting when opening a new file
 let g:ale_fix_on_save = 1 " Set this variable to 1 to fix files when you save them
-let b:ale_linters = {'javascript': ['eslint'], 'scss':['stylelint']}
-let g:ale_fixers = {'javascript': ['eslint'], 'scss':['stylelint'], 'html':['prettier']}
+let g:ale_linters = {
+\  'javascript': ['eslint'], 
+\  'scss':['stylelint'],
+\  'typescript':['eslint'],
+\  'typescriptreact':['eslint']
+\}
+let g:ale_fixers = {
+\  'javascript': ['eslint'], 
+\  'scss':['stylelint'], 
+\  'html':['prettier'],
+\  'typescript': ['prettier', 'eslint'],
+\  'typescriptreact': ['prettier', 'eslint']
+\}
+
 let g:airline#extensions#ale#enabled = 1
+let g:ale_typescript_prettier_use_local_config = 1
 
 "
 " Deoplete.
@@ -292,8 +306,7 @@ let g:deoplete#enable_at_startup = 1
 " <TAB>: completion.
 inoremap <expr><TAB>  pumvisible() ? "\<C-n>" : "\<TAB>"
 
-"Vim rainbow 
-let g:rainbow_active = 1
-
 " set filetypes as typescriptreact
 autocmd BufNewFile,BufRead *.tsx,*.jsx set filetype=typescriptreact
+
+
