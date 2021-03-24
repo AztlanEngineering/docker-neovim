@@ -284,8 +284,8 @@ let g:ale_fix_on_save = 1 " Set this variable to 1 to fix files when you save th
 let g:ale_linters = {
 \  'javascript': ['eslint'], 
 \  'scss':['stylelint'],
-\  'typescript':['eslint'],
-\  'typescriptreact':['eslint']
+\  'typescript':['eslint', 'tsserver'],
+\  'typescriptreact':['eslint', 'tsserver']
 \}
 let g:ale_fixers = {
 \  'javascript': ['eslint'], 
@@ -294,6 +294,8 @@ let g:ale_fixers = {
 \  'typescript': ['prettier', 'eslint'],
 \  'typescriptreact': ['prettier', 'eslint']
 \}
+
+let g:ale_linter_aliases = {'jsx': 'javascript'}
 
 let g:airline#extensions#ale#enabled = 1
 let g:ale_typescript_prettier_use_local_config = 1
@@ -308,5 +310,6 @@ inoremap <expr><TAB>  pumvisible() ? "\<C-n>" : "\<TAB>"
 
 " set filetypes as typescriptreact
 autocmd BufNewFile,BufRead *.tsx,*.jsx set filetype=typescriptreact
+autocmd BufNewFile,BufRead *.ts set filetype=typescript
 
 
