@@ -183,6 +183,7 @@ nnoremap <leader>y :IndentLinesToggle<CR>
 
 "Fix the file in case it doesnt work on save
 nnoremap <leader>f :ALEFix<CR>
+nnoremap <leader>c :!eslint --fix %<CR>
 
 noremap <leader><Space> :w<CR>
 noremap <leader>q :q!<CR>
@@ -283,12 +284,14 @@ let g:ale_lint_on_enter = 1 " Less distracting when opening a new file
 let g:ale_fix_on_save = 1 " Set this variable to 1 to fix files when you save them
 let g:ale_linters = {
 \  'javascript': ['eslint'], 
+\  'javascriptreact': ['eslint'], 
 \  'scss':['stylelint'],
 \  'typescript':['eslint', 'tsserver'],
 \  'typescriptreact':['eslint', 'tsserver']
 \}
 let g:ale_fixers = {
 \  'javascript': ['eslint'], 
+\  'javascriptreact': ['eslint'], 
 \  'scss':['stylelint'], 
 \  'html':['prettier'],
 \  'typescript': ['prettier', 'eslint'],
@@ -309,7 +312,8 @@ let g:deoplete#enable_at_startup = 1
 inoremap <expr><TAB>  pumvisible() ? "\<C-n>" : "\<TAB>"
 
 " set filetypes as typescriptreact
-autocmd BufNewFile,BufRead *.tsx,*.jsx set filetype=typescriptreact
+autocmd BufNewFile,BufRead *.tsx set filetype=typescriptreact
+autocmd BufNewFile,BufRead *.jsx set filetype=javascriptreact
 autocmd BufNewFile,BufRead *.ts set filetype=typescript
 
 
