@@ -41,6 +41,7 @@ Plug 'peitalin/vim-jsx-typescript' "tsx
 Plug 'Quramy/tsuquyomi' "tsserver client featuresg
 Plug 'nvie/vim-flake8' "Python 
 Plug 'cespare/vim-toml' "Vim TOML
+Plug 'rust-lang/rust.vim'
 
 "Various
 Plug 'mattn/emmet-vim' "Html https://medium.com/vim-drops/be-a-html-ninja-with-emmet-for-vim-feee15447ef1
