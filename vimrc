@@ -126,12 +126,12 @@ au FileType html
 \ setlocal tabstop=2 softtabstop=2 shiftwidth=2
 
 "json
-autocmd Filetype json :IndentLinesDisable
+autocmd Filetype json IndentLinesDisable
 \ setlocal conceallevel=0 tabstop=2 softtabstop=2 shiftwidth=2
 let g:vim_json_conceal=0
 
 "md"
-autocmd Filetype *.md :IndentLinesDisable
+autocmd Filetype *.md IndentLinesDisable
 au Filetype *.md 
 \ setlocal conceallevel=0
 let g:vim_markdown_conceal = 0
