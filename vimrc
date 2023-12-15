@@ -49,6 +49,7 @@ Plug 'rust-lang/rust.vim'
 "Various
 Plug 'mattn/emmet-vim' "Html https://medium.com/vim-drops/be-a-html-ninja-with-emmet-for-vim-feee15447ef1
 Plug 'jmcantrell/vim-virtualenv' "Detect python venv
+Plug 'github/copilot.vim' "Then run :Copilot setup
 
 "Linting and autocomplete
 Plug 'dense-analysis/ale' "Integrates with eslint/linter_name if eslint/linter_name binary in $PATH. Integrates with deoplete
@@ -115,7 +116,6 @@ au Filetype js,cjs,jsx,mjs,ts,jsx
 \ setlocal tabstop=2 softtabstop=2 shiftwidth=2
 "autocmd BufWritePost *.js,*.jsx AsyncRun -post=checktime ./node_modules/.bin/eslint --fix %
 
-
 "scss
 au FileType less,css,scss,sass
 \ setlocal tabstop=2 softtabstop=2 shiftwidth=2 iskeyword+=-
@@ -125,19 +125,17 @@ au FileType less,css,scss,sass
 au FileType html
 \ setlocal tabstop=2 softtabstop=2 shiftwidth=2
 
-"json
-autocmd Filetype json IndentLinesDisable
-\ setlocal conceallevel=0 tabstop=2 softtabstop=2 shiftwidth=2
+" JSON
+autocmd FileType json setlocal conceallevel=0 tabstop=2 softtabstop=2 shiftwidth=2
+autocmd FileType json IndentLinesDisable
 let g:vim_json_conceal=0
 
-"md"
-autocmd Filetype *.md IndentLinesDisable
-au Filetype *.md 
-\ setlocal conceallevel=0
+" Markdown
+autocmd FileType markdown setlocal conceallevel=0
+autocmd FileType markdown IndentLinesDisable
 let g:vim_markdown_conceal = 0
 let g:vim_markdown_conceal_code_blocks = 0
 let g:indentLine_fileTypeExclude = ['markdown']
-
 
 "yaml
 autocmd FileType yaml,yml 
