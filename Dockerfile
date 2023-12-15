@@ -23,7 +23,7 @@ WORKDIR /x/
 #Required for vim plugins below
 RUN apk add --no-cache -X http://dl-cdn.alpinelinux.org/alpine/edge/community fzf the_silver_searcher
 RUN apk add --no-cache -X http://dl-cdn.alpinelinux.org/alpine/edge/community bat
-RUN apk add --no-cache tidyhtml bash
+RUN apk add --no-cache tidyhtml yamllint bash
 ENV FZF_DEFAULT_COMMAND='ag --nocolor -g ""'
 ENV FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 ENV FZF_ALT_C_COMMAND="$FZF_DEFAULT_COMMAND"

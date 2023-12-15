@@ -108,24 +108,27 @@ endif
 au Filetype *.py
 \ setlocal tabstop=4 textwidth=79 expandtab autoindent fileformat=unix encoding=utf-8 
 let python_highlight_all=1
+let g:python3_host_prog="/usr/bin/python3"
 
-"Js
-au Filetype js,mjs,ts,jsx
-\ setlocal tabstop=2
+"js
+au Filetype js,cjs,jsx,mjs,ts,jsx
+\ setlocal tabstop=2 softtabstop=2 shiftwidth=2
 "autocmd BufWritePost *.js,*.jsx AsyncRun -post=checktime ./node_modules/.bin/eslint --fix %
 
 
 "scss
 au FileType less,css,scss,sass
-\ setlocal tabstop=2 iskeyword+=-
+\ setlocal tabstop=2 softtabstop=2 shiftwidth=2 iskeyword+=-
 "autocmd BufWritePost *.css,*.less,*.scss,*.sass AsyncRun -post=checktime ./node_modules/.bin/csscomb %
 
 "Html
 au FileType html
-\ setlocal tabstop=2 
+\ setlocal tabstop=2 softtabstop=2 shiftwidth=2
 
 "json
 autocmd Filetype json :IndentLinesDisable
+\ setlocal conceallevel=0 tabstop=2 softtabstop=2 shiftwidth=2
+let g:vim_json_conceal=0
 
 "md"
 autocmd Filetype *.md :IndentLinesDisable
@@ -134,6 +137,12 @@ au Filetype *.md
 let g:vim_markdown_conceal = 0
 let g:vim_markdown_conceal_code_blocks = 0
 let g:indentLine_fileTypeExclude = ['markdown']
+
+
+"yaml
+autocmd FileType yaml,yml 
+\ setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+
 " ——————————————
 " Theme
 " ——————————————
