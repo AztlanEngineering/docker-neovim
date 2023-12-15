@@ -192,6 +192,9 @@ nnoremap <leader>e :e!<CR>
 nnoremap <leader>l :set number!<CR>
 nnoremap <leader>L :set relativenumber!<CR>
 
+"toogle ALE
+nnoremap <leader>a :ALEToggleBuffer<CR>
+
 nnoremap <leader>y :IndentLinesToggle<CR>
 
 "Fix the file in case it doesnt work on save

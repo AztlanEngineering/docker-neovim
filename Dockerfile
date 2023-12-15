@@ -50,7 +50,7 @@ ENV PYTHONUNBUFFERED=1
 
 #
 ENV PROJECT_HOME="/x"
-RUN echo "**** install Python ****" && \
+RUN echo "**** install Python latest ****" && \
     apk add --no-cache python3 py3-pip && \
     if [ ! -e /usr/bin/python ]; then ln -sf python3 /usr/bin/python ; fi && \
     \
@@ -59,6 +59,9 @@ RUN echo "**** install Python ****" && \
 RUN apk add --no-cache gcc python3-dev musl-dev
 
 RUN pip3 install --user --break-system-packages pynvim
+# Super ugly fix, as it's quite complicated to install several python versions
+# This is only meant for linting usage in vim
+RUN ln -sf /usr/bin/python /usr/bin/python3.9
 
 RUN apk del gcc python3-dev musl-dev
 
