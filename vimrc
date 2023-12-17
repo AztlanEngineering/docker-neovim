@@ -210,8 +210,7 @@ noremap <leader><Space> :w<CR>
 noremap <leader>q :q!<CR>
 noremap <leader>b :bd!<CR>
 
-"Folding with space
-nnoremap <bs>
+nnoremap <bs> Xi
 
 "Mapping the delete key (bug on arch + ssh)
 map <F1> <Del>
