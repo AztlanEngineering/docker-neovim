@@ -176,6 +176,9 @@ nnoremap k <C-W><C-K>
 nnoremap l <C-W><C-L>
 nnoremap h <C-W><C-H>
 
+nnoremap K :ALEHover<CR>
+nnoremap <silent> gr :ALEFindReferences<CR>
+
 nnoremap <leader>r <C-W>r
 nnoremap <leader>R <C-W>R
 
@@ -192,6 +195,9 @@ nnoremap <leader>L :set relativenumber!<CR>
 
 "toogle ALE
 nnoremap <leader>a :ALEToggleBuffer<CR>
+nnoremap <leader>z :ALEPrevious<CR>
+nnoremap <leader>x :ALENext<CR>
+nnoremap <leader>d :ALEGoToDefinition<CR>
 
 nnoremap <leader>y :IndentLinesToggle<CR>
 
@@ -204,8 +210,7 @@ noremap <leader>q :q!<CR>
 noremap <leader>b :bd!<CR>
 
 "Folding with space
-nnoremap <silent> <Space> @=(foldlevel('.')?'za':"\<Space>")<CR>
-nnoremap <bs> Xi
+nnoremap <bs>
 
 "Mapping the delete key (bug on arch + ssh)
 map <F1> <Del>
