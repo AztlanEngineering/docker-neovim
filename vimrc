@@ -194,16 +194,17 @@ nnoremap <leader>l :set number!<CR>
 nnoremap <leader>L :set relativenumber!<CR>
 
 "toogle ALE
+nnoremap <leader>f :ALEFix<CR>
 nnoremap <leader>a :ALEToggleBuffer<CR>
 nnoremap <leader>z :ALEPrevious<CR>
 nnoremap <leader>x :ALENext<CR>
 nnoremap <leader>d :ALEGoToDefinition<CR>
+nnoremap <leader>c :ALEStopAllLSPs<CR>
 
 nnoremap <leader>y :IndentLinesToggle<CR>
 
 "Fix the file in case it doesnt work on save
-nnoremap <leader>f :ALEFix<CR>
-nnoremap <leader>c :!eslint --fix %<CR>
+
 
 noremap <leader><Space> :w<CR>
 noremap <leader>q :q!<CR>
