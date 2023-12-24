@@ -5,11 +5,18 @@
 call plug#begin('~/.vim/plugged')
 
 " General
-Plug 'airblade/vim-gitgutter'
+Plug 'mhinz/vim-signify'
 Plug 'scrooloose/nerdtree'
 Plug 'Xuyuanp/nerdtree-git-plugin'
 Plug 'tpope/vim-fugitive'
-Plug 'vim-airline/vim-airline'
+"Plug 'vim-airline/vim-airline' "Deprecated
+"Plug 'nvim-neo-tree/neo-tree.nvim' "Need to install packer or lazy
+Plug 'nvim-lualine/lualine.nvim'
+"If you want to have icons in your statusline add the next
+Plug 'nvim-tree/nvim-web-devicons'
+Plug 'nvim-lua/plenary.nvim' "Required for cokeline
+Plug 'willothy/nvim-cokeline'
+
 Plug 'jiangmiao/auto-pairs'
 Plug 'Yggdroot/indentLine'
 Plug 'junegunn/fzf'
@@ -22,6 +29,7 @@ Plug 'andymass/vim-matchup' "Extend usage of % key
 "Plug 'morhetz/gruvbox'
 Plug 'ryanoasis/vim-devicons'
 Plug 'cocopon/iceberg.vim'
+Plug 'folke/tokyonight.nvim'
 "Plug 'AlexvZyl/nordic.nvim', { 'branch':'main' }
 Plug 'vim-airline/vim-airline-themes'
 
@@ -145,21 +153,13 @@ autocmd FileType yaml,yml
 " Theme
 " ——————————————
 
-"let g:gruvbox_contrast_dark = 'hard'
-"colorscheme gruvbox "Will give an error on docker compilation, normal
 colorscheme iceberg "Will give an error on docker compilation, normal
-let g:airline_left_sep = ''
-let g:airline_right_sep = ''
 set fillchars+=vert:\ 
 hi VertSplit cterm=NONE ctermbg=NONE ctermfg=NONE gui=NONE guibg=NONE guifg=NONE
 hi Normal guibg=NONE ctermbg=NONE
 hi clear EndOfBuffer
 hi clear NonText
 hi clear LineNr ctermbg=NONE guibg=NONE
-hi clear airline_tabfill
-hi clear airline_a
-hi clear airline_a_inactive
-hi! airline_c ctermbg=NONE guibg=NONE
 autocmd BufRead,BufNewFile * syn match operators /[+\-\|\\\*\;\?\:\,\<\>\&\\!\\~\%\=]/ | hi operators guifg=#fe8019
 autocmd BufRead,BufNewFile * syn match parens /[{}]/ | hi parens guifg=#689d6a
 hi NERDTreeFile guifg=#
@@ -251,7 +251,7 @@ endif
 " NERDTree
 "
 
-set hidden "To always open in same tab
+"set hidden "To always open in same tab
 
 let g:NERDTreeWinSize=22
 
@@ -262,6 +262,28 @@ let NERDTreeRespectWildIgnore=1
 au BufReadPost *.html set syntax=html
 "autocmd BufRead,BufNewFile * syn match parens2 /[()]/ | hi parens2 guibg=#a89984
 "autocmd BufRead,BufNewFile * syn match parens3 /[\[\]]/ | hi parens3 guibg=#98971a
+
+"
+" cokeline
+"
+
+lua << EOF
+  require('cokeline').setup()
+EOF
+
+
+"
+"
+"
+lua << END
+require('lualine').setup({
+  options = {
+    section_separators = '', 
+    component_separators = '' 
+  },
+})
+END
+
 
 "
 "  FZF
