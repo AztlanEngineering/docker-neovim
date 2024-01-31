@@ -179,8 +179,10 @@ nnoremap h <C-W><C-H>
 nnoremap K :ALEHover<CR>
 nnoremap <silent> gr :ALEFindReferences<CR>
 
-nnoremap <leader>r <C-W>r
-nnoremap <leader>R <C-W>R
+"nnoremap <leader>r <C-W>r
+"nnoremap <leader>R <C-W>R
+nnoremap <Leader>W :%s/<C-r><C-w>/
+nnoremap <Leader>w /<C-r><C-w>
 
 "split
 nnoremap <leader>v <C-W>v
@@ -336,7 +338,8 @@ let g:ale_fixers = {
 \  'scss':['stylelint'], 
 \  'html':['prettier'],
 \  'typescript': ['prettier', 'eslint'],
-\  'typescriptreact': ['prettier', 'eslint']
+\  'typescriptreact': ['prettier', 'eslint'],
+\  'yaml': ['yamlfix'],
 \}
 
 let g:ale_linter_aliases = {'jsx': 'javascript'}

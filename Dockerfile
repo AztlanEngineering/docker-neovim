@@ -43,7 +43,7 @@ RUN apk add --no-cache nodejs npm
 RUN npm i -g typescript neovim
 
 #Add path so that we canexec the node modules from vim
-ENV PATH="./node_modules/.bin:$PATH"
+ENV PATH="/root/.local/bin:./node_modules/.bin:$PATH"
 #The following is only needed for deoplete
 # — https://github.com/Docker-Hub-frolvlad/docker-alpine-python3/blob/master/Dockerfile
 ENV PYTHONUNBUFFERED=1
@@ -57,11 +57,12 @@ RUN echo "**** install Python latest ****" && \
     pip3 install --no-cache --break-system-packages --upgrade pip setuptools wheel && \
     if [ ! -e /usr/bin/pip ]; then ln -s pip3 /usr/bin/pip ; fi
 RUN apk add --no-cache gcc python3-dev musl-dev
-
-RUN pip3 install --user --break-system-packages pynvim
+RUN mkdir -p /root/.local/bin
+RUN pip3 install --user --break-system-packages pynvim yamlfix
 # Super ugly fix, as it's quite complicated to install several python versions
 # This is only meant for linting usage in vim
 RUN ln -sf /usr/bin/python /usr/bin/python3.9
+RUN ln -sf /usr/bin/python /usr/bin/python3.10
 
 RUN apk del gcc python3-dev musl-dev
 
