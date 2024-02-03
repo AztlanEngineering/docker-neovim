@@ -340,6 +340,7 @@ let g:ale_fixers = {
 \  'typescript': ['prettier', 'eslint'],
 \  'typescriptreact': ['prettier', 'eslint'],
 \  'yaml': ['yamlfix'],
+\  'python': ['black', 'isort'],
 \}
 
 let g:ale_linter_aliases = {'jsx': 'javascript'}
