@@ -183,6 +183,7 @@ nnoremap <silent> gr :ALEFindReferences<CR>
 "nnoremap <leader>R <C-W>R
 nnoremap <Leader>W :%s/<C-r><C-w>/
 nnoremap <Leader>w /<C-r><C-w>
+nnoremap <Leader>q :%s/<C-r><C-w>/
 
 "split
 nnoremap <leader>v <C-W>v
@@ -201,6 +202,7 @@ nnoremap <leader>a :ALEToggleBuffer<CR>
 nnoremap <leader>z :ALEPrevious<CR>
 nnoremap <leader>x :ALENext<CR>
 nnoremap <leader>d :ALEGoToDefinition<CR>
+nnoremap <leader>D :ALEGoToTypeDefinition<CR>
 nnoremap <leader>c :ALEStopAllLSPs<CR>
 
 nnoremap <leader>y :IndentLinesToggle<CR>
@@ -209,8 +211,6 @@ nnoremap <leader>y :IndentLinesToggle<CR>
 
 
 noremap <leader><Space> :w<CR>
-noremap <leader>q :q!<CR>
-noremap <leader>b :bd!<CR>
 
 nnoremap <bs> Xi
 
@@ -352,6 +352,14 @@ let g:ale_typescript_prettier_use_local_config = 1
 " Deoplete.
 "
 let g:deoplete#enable_at_startup = 1
+
+
+"
+" Copilot
+"
+
+let g:copilot_workspace_folders =
+      \ ["/x"]
 
 " <TAB>: completion.
 inoremap <expr><TAB>  pumvisible() ? "\<C-n>" : "\<TAB>"
