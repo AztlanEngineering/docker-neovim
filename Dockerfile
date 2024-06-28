@@ -7,8 +7,8 @@ FROM alpine:latest
 
 MAINTAINER fwrlines <hello@fwrlines.com>
 
-
 RUN apk add --no-cache build-base neovim neovim-doc curl git
 
+COPY init.lua /root/.config/nvim/init.lua
 
 ENTRYPOINT ["nvim"]
