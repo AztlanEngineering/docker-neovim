@@ -24,6 +24,7 @@ Plug 'junegunn/fzf.vim'
 "Plug 'skywind3000/asyncrun.vim'
 "Plug 'frazrepo/vim-rainbow' "Matches colors for opening and closing parens
 Plug 'andymass/vim-matchup' "Extend usage of % key
+Plug 'tpope/vim-commentary' "Toggle comments
 
 "Theme
 "Plug 'morhetz/gruvbox'
@@ -43,6 +44,8 @@ Plug 'MaxMEllon/vim-jsx-pretty' "jsx
 Plug 'tikhomirov/vim-glsl' "Gl Shader Lang
 Plug 'plasticboy/vim-markdown' "Markdown, Md
 Plug 'ekalinin/Dockerfile.vim' "Dockerfile
+Plug 'jvirtanen/vim-hcl' "HCL
+Plug 'hashivim/vim-terraform' "Terraform
 "Plug 'fatih/vim-go' "Go
 "Plug 'derekwyatt/vim-scala' "scala
 
