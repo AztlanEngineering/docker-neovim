@@ -2,8 +2,8 @@
 #FROM alpine:latest as builder
 #COPY --from=builder /usr/bin/ /usr/bin
 
-#FROM alpine:latest
-FROM alpine:3.19
+FROM alpine:latest
+#FROM alpine:3.19
 
 MAINTAINER fwrlines <hello@fwrlines.com>
 
@@ -71,5 +71,9 @@ RUN apk del gcc python3-dev musl-dev
 
 RUN nvim +PlugInstall +qall
 RUN nvim +UpdateRemotePlugins +qall
+
+# Ugly fix https://github.com/neovim/neovim/issues/28827
+ENV TMUX=foo
+ENV PLATFORM=alpine
 
 ENTRYPOINT ["nvim"]
