@@ -1,5 +1,6 @@
--- init.lua
-require('plugins')
+-- bootstrap lazy.nvim, LazyVim and your plugins
+vim.g.mapleader = ","
 
-vim.cmd("colorscheme desert")  -- Dummy config: set colorscheme to default
-
+require("config.lazy")
+require("config.autocmds")
+require("config.keymaps")
