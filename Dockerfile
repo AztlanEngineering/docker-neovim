@@ -28,6 +28,14 @@ RUN apk add --no-cache fd
 RUN apk add --no-cache nodejs npm 
 RUN npm i -g tree-sitter-cli 
 
+# LSP, CMP
+# Add path so that we canexec the node modules from vim
+ENV PATH="/root/.local/bin:./node_modules/.bin:$PATH"
+RUN npm i -g typescript neovim
+RUN apk add --no-cache bash # For lua LSP
+
+
+# Final setup and install
 COPY init.lua /root/.config/nvim/init.lua
 COPY lua /root/.config/nvim/lua
 COPY stylua.toml /root/.config/nvim/stylua.toml
@@ -35,6 +43,8 @@ COPY stylua.toml /root/.config/nvim/stylua.toml
 RUN nvim --headless "+Lazy! install" +qall  
 RUN nvim --headless "+TSUpdateSync" +qall 
 RUN nvim --headless "+Lazy! sync" +qall 
+#RUN nvim --headless "+MasonInstall" +qall
+
 
 # Ugly fix https://github.com/tmux/tmux/issues/3983
 ENV TMUX=foo

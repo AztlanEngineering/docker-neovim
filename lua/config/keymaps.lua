@@ -3,7 +3,6 @@
 -- Add any additional keymaps here
 -- init.lua or keymaps.lua (wherever you define your key mappings)
 
-vim.g.mapleader = ","
 
 -- Normal mode key mappings
 vim.api.nvim_set_keymap('n', 'j', '<C-W><C-J>', { noremap = true })
@@ -11,12 +10,13 @@ vim.api.nvim_set_keymap('n', 'k', '<C-W><C-K>', { noremap = true })
 vim.api.nvim_set_keymap('n', 'l', '<C-W><C-L>', { noremap = true })
 vim.api.nvim_set_keymap('n', 'h', '<C-W><C-H>', { noremap = true })
 
-vim.api.nvim_set_keymap('n', 'K', ':ALEHover<CR>', { noremap = true })
-vim.api.nvim_set_keymap('n', 'gr', ':ALEFindReferences<CR>', { noremap = true, silent = true })
+-- vim.api.nvim_set_keymap('n', 'K', ':ALEHover<CR>', { noremap = true })
+-- vim.api.nvim_set_keymap('n', 'gr', ':ALEFindReferences<CR>', { noremap = true, silent = true })
 
 vim.api.nvim_set_keymap('n', '<Leader>W', ':%s/<C-r><C-w>/', { noremap = true })
 vim.api.nvim_set_keymap('n', '<Leader>w', '/<C-r><C-w>', { noremap = true })
 vim.api.nvim_set_keymap('n', '<Leader>q', ':%s/<C-r><C-w>/', { noremap = true })
+vim.api.nvim_set_keymap('n', '<bs>', 'Xi', { noremap = true })
 
 -- Split windows
 vim.api.nvim_set_keymap('n', '<Leader>v', '<C-W>v', { noremap = true })
@@ -43,3 +43,7 @@ vim.api.nvim_set_keymap('n', '<Leader>y', ':IndentLinesToggle<CR>', { noremap = 
 
 -- Save file
 vim.api.nvim_set_keymap('n', '<Leader><Space>', ':w<CR>', { noremap = true })
+
+-- Exit terminal mode
+vim.api.nvim_set_keymap('t', '<Esc>', '<C-\\><C-n>', { noremap = true, silent = true })
+

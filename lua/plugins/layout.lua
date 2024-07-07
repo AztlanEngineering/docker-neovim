@@ -12,6 +12,29 @@ return {
       vim.api.nvim_set_hl(0, 'TabLineFill', { bg = 'none' })
     end,
   },
+  {
+    "norcalli/nvim-colorizer.lua",
+    event = "BufReadPre",
+    config = function()
+      require 'colorizer'.setup({
+        'css';
+        'scss';
+        'javascript';
+        'javascriptreact';
+        'typescript';
+        'typescriptreact';
+        'html';
+      }, { 
+        mode = 'background';
+        RRGGBBAA = true;
+        rgb_fn = true;
+        hsl_fn = true;
+        css = true;
+        css_fn = true;
+      })
+    end,
+
+  },
   -- {
   --   "LazyVim/LazyVim",
   --   opts = {
@@ -50,6 +73,11 @@ return {
           hide_dotfiles = false,
           hide_gitignored = true,
         },
+      },
+      window = {
+        mapping_options = {
+          noremap = false,
+        }
       },
     },
     -- config = function()
