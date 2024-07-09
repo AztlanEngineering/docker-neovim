@@ -13,6 +13,8 @@ RUN apk add --no-cache \
     curl \
     git 
 
+RUN apk add --no-cache build-base # GCC + Make, requried for FZF ext
+
 # https://wiki.alpinelinux.org/wiki/GCC, required for pynvim
 RUN apk add --no-cache gcc musl-dev 
 
@@ -33,6 +35,7 @@ RUN npm i -g tree-sitter-cli
 ENV PATH="/root/.local/bin:./node_modules/.bin:$PATH"
 RUN npm i -g typescript neovim
 RUN apk add --no-cache bash # For lua LSP
+RUN apk add --no-cache fzf # For telescope
 
 
 # Final setup and install
@@ -43,7 +46,8 @@ COPY stylua.toml /root/.config/nvim/stylua.toml
 RUN nvim --headless "+Lazy! install" +qall  
 RUN nvim --headless "+TSUpdateSync" +qall 
 RUN nvim --headless "+Lazy! sync" +qall 
-#RUN nvim --headless "+MasonInstall" +qall
+RUN nvim --headless "+MasonInstallAllPackages" +qall
+RUN nvim --headless "+MasonInstallAllLsps" +qall
 
 
 # Ugly fix https://github.com/tmux/tmux/issues/3983

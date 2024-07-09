@@ -9,23 +9,6 @@
 -- * disable/enabled LazyVim plugins
 -- * override the configuration of LazyVim plugins
 return {
-  {
-    'windwp/nvim-autopairs',
-    event = "InsertEnter",
-    config = true
-    -- use opts = {} for passing setup options
-    -- this is equalent to setup({}) function
-  },
-  { "terrortylor/nvim-comment",
-    lazy = false,
-    keys = {
-        { "<Leader>/", "<CMD>CommentToggle<CR>", mode = { "n" } },
-        -- { "<C-_>", "<C-\\><C-N><CMD>CommentToggle<CR>ji", mode = { "i" } },
-        { "<Leader>/", ":'<,'>CommentToggle<CR>gv<esc>", mode = { "v" } },
-    },
-    main="nvim_comment",
-    config = true
-  },
   ---- add gruvbox
   --{ "ellisonleao/gruvbox.nvim" },
 

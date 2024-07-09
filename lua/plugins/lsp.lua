@@ -1,3 +1,11 @@
+local function copilot_tab_complete()
+  if require("copilot.suggestion").is_visible() then
+    require("copilot.suggestion").accept()
+  else
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Tab>", true, false, true), "n", false)
+  end
+end
+
 return {
 { "VonHeikemen/lsp-zero.nvim",
     event = "BufReadPre",
@@ -17,6 +25,10 @@ return {
       end)
       lsp_zero.setup()
       require('lspconfig').tsserver.setup({})
+
+      require('lspconfig').stylelint_lsp.setup({
+        
+      })
 
       require('lspconfig').lua_ls.setup({
         settings = {
@@ -59,6 +71,15 @@ return {
     "zbirenbaum/copilot.lua",
     event = "InsertEnter",
     config = true,
+    opts = {
+      suggestion = {
+        enabled = true,
+        auto_trigger = true,
+      }
+    },
+    keys = {
+      {"<Tab>", function() copilot_tab_complete() end, mode = { 'i' }, silent = true, noremap = true}
+    },
   },
   {
     "zbirenbaum/copilot-cmp",
@@ -142,7 +163,7 @@ return {
                 ["<C-f>"] = cmp.mapping.scroll_docs(4),
                 ["<C-Space>"] = cmp.mapping.complete(),
                 ["<C-e>"] = cmp.mapping.close(),
-                ['<Tab>'] = cmp.mapping(function(fallback)
+                ['<CR>'] = cmp.mapping(function(fallback)
                   if cmp.visible() then
                       if luasnip.expandable() then
                           luasnip.expand()
@@ -158,12 +179,12 @@ return {
             }),
             sources = cmp.config.sources({
                 -- Copilot Source
-                { name = "copilot", group_index = 2 },
-                { name = "nvim_lsp" },
-                { name = "luasnip" },
-                { name = "buffer" },
+                { name = "copilot", group_index = 1 },
+                { name = "nvim_lsp", group_index = 2 },
+                { name = "luasnip", group_index = 3 },
+                { name = "buffer", group_index = 4 },
                 { name = "path" },
-                { name = "emoji" },
+                { name = "emoji", group_index = 9 },
                 -- { name = "cmdline" },
             }),
         })
