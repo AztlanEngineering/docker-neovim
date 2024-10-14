@@ -44,6 +44,7 @@ ENV BAT_THEME=iceberg
 # We add node to be able to execure JS and Linting binaries
 RUN apk add --no-cache nodejs npm
 RUN npm i -g typescript neovim
+# RUN curl -fsSL https://bun.sh/install | bash
 
 #Add path so that we canexec the node modules from vim
 ENV PATH="/root/.local/bin:./node_modules/.bin:$PATH"

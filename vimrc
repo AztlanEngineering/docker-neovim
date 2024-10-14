@@ -329,19 +329,19 @@ let g:ale_sign_warning = '—'
 let g:ale_lint_on_enter = 1 " Less distracting when opening a new file
 let g:ale_fix_on_save = 1 " Set this variable to 1 to fix files when you save them
 let g:ale_linters = {
-\  'javascript': ['eslint'], 
-\  'javascriptreact': ['eslint'], 
+\  'javascript': ['eslint', 'biome'], 
+\  'javascriptreact': ['eslint', 'biome'], 
 \  'scss':['stylelint'],
-\  'typescript':['eslint', 'tsserver'],
-\  'typescriptreact':['eslint', 'tsserver']
+\  'typescript':['eslint', 'tsserver', 'biome'],
+\  'typescriptreact':['eslint', 'tsserver', 'biome']
 \}
 let g:ale_fixers = {
-\  'javascript': ['eslint'], 
-\  'javascriptreact': ['eslint'], 
+\  'javascript': ['eslint', 'biome'], 
+\  'javascriptreact': ['eslint', 'biome'], 
 \  'scss':['stylelint'], 
-\  'html':['prettier'],
-\  'typescript': ['prettier', 'eslint'],
-\  'typescriptreact': ['prettier', 'eslint'],
+\  'html':['prettier', 'biome'],
+\  'typescript': ['prettier', 'eslint', 'biome'],
+\  'typescriptreact': ['prettier', 'eslint', 'biome'],
 \  'yaml': ['yamlfix'],
 \  'python': ['black', 'isort'],
 \}
