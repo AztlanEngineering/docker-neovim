@@ -73,6 +73,8 @@ RUN apk del gcc python3-dev musl-dev
 RUN nvim +PlugInstall +qall
 RUN nvim +UpdateRemotePlugins +qall
 
+#VOLUME $(pwd):/x
+
 # Ugly fix https://github.com/neovim/neovim/issues/28827
 ENV TMUX=foo
 ENV PLATFORM=alpine
