@@ -350,6 +350,8 @@ let g:ale_linter_aliases = {'jsx': 'javascript'}
 
 let g:airline#extensions#ale#enabled = 1
 let g:ale_typescript_prettier_use_local_config = 1
+let g:ale_biome_use_global = 1
+
 
 "
 " Deoplete.
