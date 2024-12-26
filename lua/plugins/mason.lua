@@ -17,7 +17,7 @@ local servers = {
   'rust_analyzer',
   'somesass_ls',
   'stylelint_lsp',
-  'tsserver',
+  'ts_ls',
   'yamlls',
 }
 

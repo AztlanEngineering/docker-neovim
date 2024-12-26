@@ -1,3 +1,12 @@
+local function active_linters()
+  local linters = require("lint").get_running()
+  if #linters == 0 then
+    return "Lint: 0"
+  else
+    return "Lint: " .. table.concat(linters, ", ")
+  end
+end
+
 return {
   {
     "cocopon/iceberg.vim",
@@ -50,6 +59,12 @@ return {
         theme = "iceberg_dark",
         section_separators = "",
         component_separators = "",
+      },
+      sections = {
+        lualine_c = {
+          { 'filename' },
+          { active_linters },
+        },
       },
     }
   },
