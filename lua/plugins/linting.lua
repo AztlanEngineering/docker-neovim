@@ -16,6 +16,7 @@ return {
         scss = {"stylelint"},
         typescript = {"eslint", "tsserver", "biome"},
         typescriptreact = {"eslint", "tsserver", "biome"},
+        python = {"ruff", "mypy", "black", "isort", "pyliny"},
       }
 
       -- Define fixers for specific filetypes
@@ -27,7 +28,7 @@ return {
         typescript = {"prettier", "eslint", "biome"},
         typescriptreact = {"prettier", "eslint", "biome"},
         yaml = {"yamlfix"},
-        python = {"black", "isort"},
+        python = {"black", "isort", "ruff_format"},
       }
 
       -- Set ALE linter aliases

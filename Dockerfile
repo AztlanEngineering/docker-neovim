@@ -27,7 +27,7 @@ RUN luarocks-5.1 install luarocks
 RUN apk add --no-cache fd 
 
 # For node and related packages 
-RUN apk add --no-cache nodejs npm 
+RUN apk add --no-cache nodejs npm uv 
 RUN npm i -g tree-sitter-cli 
 
 # LSP, CMP
@@ -38,10 +38,23 @@ RUN apk add --no-cache bash # For lua LSP
 RUN apk add --no-cache fzf # For telescope
 
 
+
+RUN adduser -D -u 1000 myuser
+ENV HOME=/home/myuser
+WORKDIR /home/myuser
+RUN mkdir /home/myuser/.config
+
+COPY init.lua $HOME/.config/nvim/init.lua
+COPY lua $HOME/.config/nvim/lua
+COPY stylua.toml $HOME/.config/nvim/stylua.toml
+
+RUN chown 1000:1000 -R "$HOME"
+USER 1000:1000
+
 # Final setup and install
-COPY init.lua /root/.config/nvim/init.lua
-COPY lua /root/.config/nvim/lua
-COPY stylua.toml /root/.config/nvim/stylua.toml
+# COPY init.lua /root/.config/nvim/init.lua
+# COPY lua /root/.config/nvim/lua
+# COPY stylua.toml /root/.config/nvim/stylua.toml
 
 RUN nvim --headless "+Lazy! install" +qall  
 RUN nvim --headless "+TSUpdateSync" +qall 
@@ -54,6 +67,8 @@ RUN nvim --headless "+MasonInstallAllLsps" +qall
 ENV TMUX=foo
 
 WORKDIR /x/
-RUN git config --global --add safe.directory /x 
+#RUN git config --global --add safe.directory /x 
+#RUN git config --add safe.directory /x 
+
 
 ENTRYPOINT ["nvim"]
