@@ -23,12 +23,17 @@ RUN apk add --no-cache lua5.1 lua5.1-dev luarocks
 RUN apk add --no-cache ripgrep 
 RUN luarocks-5.1 install luarocks 
 
+# for Avante
+RUN apk add rust cargo 
+
+
 # For telescope
 RUN apk add --no-cache fd 
 
 # For node and related packages 
 RUN apk add --no-cache nodejs npm uv 
 RUN npm i -g tree-sitter-cli 
+RUN npm i -g mcp-hub@latest claude
 
 # LSP, CMP
 # Add path so that we canexec the node modules from vim
@@ -56,7 +61,10 @@ USER 1000:1000
 # COPY lua /root/.config/nvim/lua
 # COPY stylua.toml /root/.config/nvim/stylua.toml
 
+
 RUN nvim --headless "+Lazy! install" +qall  
+# Force clean build of avante from source for Alpine Linux compatibility
+RUN cd /home/myuser/.local/share/nvim/lazy/avante.nvim && rm -rf build/* && make BUILD_FROM_SOURCE=true
 RUN nvim --headless "+TSUpdateSync" +qall 
 RUN nvim --headless "+Lazy! sync" +qall 
 RUN nvim --headless "+MasonInstallAllPackages" +qall
