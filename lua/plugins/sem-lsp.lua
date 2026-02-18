@@ -1,10 +1,9 @@
 -- sem-lsp: Turtle/RDF language server
--- Binary is mounted into the container at /usr/local/bin/sem-lsp
--- via the v2() function in df/config/zsh/aliases.sh
+-- The sem-lsp binary is volume-mounted into the container
+-- via the v2() function in df/config/zsh/aliases.sh.
 --
--- Requires: host daemon running + ~/.kg/store mounted read-only into container.
--- The v2() shell function should include:
---   -v "$HOME/.kg/store:/home/myuser/.kg/store:ro"
+-- The host's pre-built LMDB store (~/.kg/store) is also mounted read-only.
+-- Daemon autostart is disabled; sem-lsp reads directly from the mounted store.
 
 -- Register .ttl as turtle filetype (neovim doesn't know it by default)
 vim.filetype.add({
@@ -21,7 +20,9 @@ if not configs.sem_lsp then
     default_config = {
       cmd = { "/usr/local/bin/sem-lsp" },
       cmd_env = {
-        -- Daemon runs on host; container reads LMDB store via volume mount
+        -- Use the host's pre-built LMDB store (mounted read-only by v2())
+        SEM_STORE_PATH = "/home/myuser/.kg/store",
+        -- No daemon needed; read directly from the mounted store
         SEM_DAEMON_AUTOSTART = "false",
       },
       filetypes = { "turtle" },
