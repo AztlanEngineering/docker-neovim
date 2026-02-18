@@ -1,5 +1,19 @@
 return {
   {
+    "folke/which-key.nvim",
+    event = "VeryLazy",
+    opts = {
+      spec = {
+        { "<leader>a", group = "Avante" },
+        { "<leader>C", group = "Claude" },
+        { "<leader>x", group = "Trouble" },
+        { "<leader>m", group = "MCP" },
+        { "<leader>l", group = "Logs" },
+        { "<leader>r", group = "Refactor" },
+      },
+    },
+  },
+  {
     "cocopon/iceberg.vim",
     config = function()
       vim.cmd("colorscheme iceberg")

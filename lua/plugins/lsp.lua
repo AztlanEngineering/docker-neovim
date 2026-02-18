@@ -1,18 +1,10 @@
-local function copilot_tab_complete()
-  if require("copilot.suggestion").is_visible() then
-    require("copilot.suggestion").accept()
-  else
-    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Tab>", true, false, true), "n", false)
-  end
-end
-
 -- Configure LSP servers via vim.lsp.config (Neovim 0.11+ native API)
-vim.lsp.config('lua_ls', {
+vim.lsp.config("lua_ls", {
   settings = {
     Lua = {
-      runtime = { version = 'LuaJIT' },
+      runtime = { version = "LuaJIT" },
       diagnostics = {
-        globals = { 'vim' },
+        globals = { "vim" },
       },
       workspace = {
         library = vim.api.nvim_get_runtime_file("", true),
@@ -25,7 +17,7 @@ vim.lsp.config('lua_ls', {
 
 -- Enable system-installed LSP servers (not managed by Mason)
 -- lua-language-server and rust-analyzer are installed via apk on Alpine
-vim.lsp.enable({ 'lua_ls', 'rust_analyzer' })
+vim.lsp.enable({ "lua_ls", "rust_analyzer" })
 
 return {
   {
@@ -36,17 +28,20 @@ return {
     },
     config = function()
       -- Default keymaps for all LSP buffers
-      vim.api.nvim_create_autocmd('LspAttach', {
+      vim.api.nvim_create_autocmd("LspAttach", {
         callback = function(args)
-          local opts = { buffer = args.buf }
-          vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
-          vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, opts)
-          vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, opts)
-          vim.keymap.set('n', 'gr', vim.lsp.buf.references, opts)
-          vim.keymap.set('n', 'K', vim.lsp.buf.hover, opts)
-          vim.keymap.set('n', '<C-k>', vim.lsp.buf.signature_help, opts)
-          vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, opts)
-          vim.keymap.set('n', '<leader>ca', vim.lsp.buf.code_action, opts)
+          local function bmap(mode, lhs, rhs, desc)
+            vim.keymap.set(mode, lhs, rhs, { buffer = args.buf, desc = desc })
+          end
+
+          bmap("n", "gd", vim.lsp.buf.definition, "Go to definition")
+          bmap("n", "gD", vim.lsp.buf.declaration, "Go to declaration")
+          bmap("n", "gi", vim.lsp.buf.implementation, "Go to implementation")
+          bmap("n", "gr", vim.lsp.buf.references, "Find references")
+          bmap("n", "K", vim.lsp.buf.hover, "Hover documentation")
+          bmap("n", "<C-k>", vim.lsp.buf.signature_help, "Signature help")
+          bmap("n", "<leader>rn", vim.lsp.buf.rename, "Rename symbol")
+          bmap("n", "<leader>ca", vim.lsp.buf.code_action, "Code action")
         end,
       })
     end,
@@ -59,17 +54,6 @@ return {
       suggestion = {
         enabled = true,
         auto_trigger = true,
-      },
-    },
-    keys = {
-      {
-        "<Tab>",
-        function()
-          copilot_tab_complete()
-        end,
-        mode = { "i" },
-        silent = true,
-        noremap = true,
       },
     },
   },
@@ -102,6 +86,12 @@ return {
 
       require("luasnip.loaders.from_vscode").lazy_load()
 
+      local has_words_before = function()
+        local line, col = unpack(vim.api.nvim_win_get_cursor(0))
+        return col ~= 0
+          and vim.api.nvim_buf_get_lines(0, line - 1, line, true)[1]:sub(col, col):match("%s") == nil
+      end
+
       cmp.setup({
         snippet = {
           expand = function(args)
@@ -118,14 +108,36 @@ return {
               if luasnip.expandable() then
                 luasnip.expand()
               else
-                cmp.confirm({
-                  select = true,
-                })
+                cmp.confirm({ select = true })
               end
             else
               fallback()
             end
           end),
+          -- Unified Tab: cmp menu > copilot ghost text > luasnip jump > complete > fallback
+          ["<Tab>"] = cmp.mapping(function(fallback)
+            local copilot_ok, copilot = pcall(require, "copilot.suggestion")
+            if cmp.visible() then
+              cmp.select_next_item()
+            elseif copilot_ok and copilot.is_visible() then
+              copilot.accept()
+            elseif luasnip.locally_jumpable(1) then
+              luasnip.jump(1)
+            elseif has_words_before() then
+              cmp.complete()
+            else
+              fallback()
+            end
+          end, { "i", "s" }),
+          ["<S-Tab>"] = cmp.mapping(function(fallback)
+            if cmp.visible() then
+              cmp.select_prev_item()
+            elseif luasnip.locally_jumpable(-1) then
+              luasnip.jump(-1)
+            else
+              fallback()
+            end
+          end, { "i", "s" }),
         }),
         sources = cmp.config.sources({
           { name = "copilot", group_index = 1 },
@@ -137,10 +149,8 @@ return {
         }),
       })
 
-      vim.cmd([[
-      set completeopt=menuone,noinsert,noselect
-      highlight! default link CmpItemKind CmpItemMenuDefault
-    ]])
+      vim.o.completeopt = "menuone,noinsert,noselect"
+      vim.cmd([[highlight! default link CmpItemKind CmpItemMenuDefault]])
     end,
   },
 }

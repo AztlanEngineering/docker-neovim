@@ -1,49 +1,34 @@
--- Keymaps are automatically loaded on the VeryLazy event
--- Default keymaps that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua
--- Add any additional keymaps here
--- init.lua or keymaps.lua (wherever you define your key mappings)
+-- Keymaps
 
+local map = vim.keymap.set
 
--- Normal mode key mappings
-vim.api.nvim_set_keymap('n', 'j', '<C-W><C-J>', { noremap = true })
-vim.api.nvim_set_keymap('n', 'k', '<C-W><C-K>', { noremap = true })
-vim.api.nvim_set_keymap('n', 'l', '<C-W><C-L>', { noremap = true })
-vim.api.nvim_set_keymap('n', 'h', '<C-W><C-H>', { noremap = true })
+-- Window navigation
+map("n", "j", "<C-W><C-J>", { desc = "Window down" })
+map("n", "k", "<C-W><C-K>", { desc = "Window up" })
+map("n", "l", "<C-W><C-L>", { desc = "Window right" })
+map("n", "h", "<C-W><C-H>", { desc = "Window left" })
 
--- vim.api.nvim_set_keymap('n', 'K', ':ALEHover<CR>', { noremap = true })
--- vim.api.nvim_set_keymap('n', 'gr', ':ALEFindReferences<CR>', { noremap = true, silent = true })
+-- Search/replace word under cursor
+map("n", "<Leader>W", ":%s/<C-r><C-w>/", { desc = "Replace word under cursor (file)" })
+map("n", "<Leader>w", "/<C-r><C-w>", { desc = "Search word under cursor" })
 
-vim.api.nvim_set_keymap('n', '<Leader>W', ':%s/<C-r><C-w>/', { noremap = true })
-vim.api.nvim_set_keymap('n', '<Leader>w', '/<C-r><C-w>', { noremap = true })
-vim.api.nvim_set_keymap('n', '<Leader>q', ':%s/<C-r><C-w>/', { noremap = true })
-vim.api.nvim_set_keymap('n', '<bs>', 'Xi', { noremap = true })
+-- Backspace deletes char and enters insert
+map("n", "<bs>", "Xi", { desc = "Delete char left and insert" })
 
 -- Split windows
-vim.api.nvim_set_keymap('n', '<Leader>v', '<C-W>v', { noremap = true })
-vim.api.nvim_set_keymap('n', '<Leader>s', '<C-W>s', { noremap = true })
+map("n", "<Leader>v", "<C-W>v", { desc = "Split vertical" })
+map("n", "<Leader>s", "<C-W>s", { desc = "Split horizontal" })
 
 -- Reload file
-vim.api.nvim_set_keymap('n', '<Leader>e', ':e!<CR>', { noremap = true })
-
--- Toggle line number
--- vim.api.nvim_set_keymap('n', '<Leader>l', ':set number!<CR>', { noremap = true })
--- vim.api.nvim_set_keymap('n', '<Leader>L', ':set relativenumber!<CR>', { noremap = true })
-
--- ALE commands
--- vim.api.nvim_set_keymap('n', '<Leader>f', ':ALEFix<CR>', { noremap = true })
--- vim.api.nvim_set_keymap('n', '<Leader>a', ':ALEToggleBuffer<CR>', { noremap = true })
--- vim.api.nvim_set_keymap('n', '<Leader>z', ':ALEPrevious<CR>', { noremap = true })
--- vim.api.nvim_set_keymap('n', '<Leader>x', ':ALENext<CR>', { noremap = true })
--- vim.api.nvim_set_keymap('n', '<Leader>d', ':ALEGoToDefinition<CR>', { noremap = true })
--- vim.api.nvim_set_keymap('n', '<Leader>D', ':ALEGoToTypeDefinition<CR>', { noremap = true })
--- vim.api.nvim_set_keymap('n', '<Leader>c', ':ALEStopAllLSPs<CR>', { noremap = true })
-
--- Toggle Indent Lines
-vim.api.nvim_set_keymap('n', '<Leader>y', ':IndentLinesToggle<CR>', { noremap = true })
+map("n", "<Leader>e", ":e!<CR>", { desc = "Reload file" })
 
 -- Save file
-vim.api.nvim_set_keymap('n', '<Leader><Space>', ':w<CR>', { noremap = true })
+map("n", "<Leader><Space>", ":w<CR>", { desc = "Save file" })
 
 -- Exit terminal mode
-vim.api.nvim_set_keymap('t', '<Esc>', '<C-\\><C-n>', { noremap = true, silent = true })
+map("t", "<Esc>", "<C-\\><C-n>", { silent = true, desc = "Exit terminal mode" })
 
+-- Diagnostic navigation
+map("n", "[d", vim.diagnostic.goto_prev, { desc = "Previous diagnostic" })
+map("n", "]d", vim.diagnostic.goto_next, { desc = "Next diagnostic" })
+map("n", "<leader>xd", vim.diagnostic.open_float, { desc = "Diagnostic float" })

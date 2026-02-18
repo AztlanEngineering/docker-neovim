@@ -49,14 +49,21 @@ RUN apk add --no-cache lua-language-server rust-analyzer
 RUN adduser -D -u 1000 myuser
 ENV HOME=/home/myuser
 WORKDIR /home/myuser
-RUN mkdir /home/myuser/.config
+RUN mkdir -p /home/myuser/.config/nvim/lua/config
 
-# Copy init.lua and stylua first (change rarely)
+# Copy init.lua and stylua (rarely change)
 COPY init.lua $HOME/.config/nvim/init.lua
 COPY stylua.toml $HOME/.config/nvim/stylua.toml
 
-# Copy lua config (changes more often, but needed for Lazy install)
-COPY lua $HOME/.config/nvim/lua
+# Copy lazy bootstrap and plugin specs (trigger full install on change)
+COPY lua/config/lazy.lua $HOME/.config/nvim/lua/config/lazy.lua
+COPY lua/plugins $HOME/.config/nvim/lua/plugins
+
+# Create stubs for config files required by init.lua
+# (real files are copied later to avoid cache-busting heavy installs)
+RUN touch $HOME/.config/nvim/lua/config/options.lua \
+          $HOME/.config/nvim/lua/config/autocmds.lua \
+          $HOME/.config/nvim/lua/config/keymaps.lua
 
 RUN chown 1000:1000 -R "$HOME"
 USER 1000:1000
@@ -75,6 +82,10 @@ RUN nvim --headless "+Lazy! sync" +qall
 RUN nvim --headless "+MasonInstallAllPackages" +qall
 RUN nvim --headless "+MasonInstallAllLsps" +qall
 
+# Copy config files last (change most often, no heavy rebuild needed)
+COPY --chown=1000:1000 lua/config/options.lua $HOME/.config/nvim/lua/config/options.lua
+COPY --chown=1000:1000 lua/config/keymaps.lua $HOME/.config/nvim/lua/config/keymaps.lua
+COPY --chown=1000:1000 lua/config/autocmds.lua $HOME/.config/nvim/lua/config/autocmds.lua
 
 # Ugly fix https://github.com/tmux/tmux/issues/3983
 ENV TMUX=foo
