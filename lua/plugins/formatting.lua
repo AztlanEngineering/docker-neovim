@@ -16,33 +16,31 @@ return {
   {
     'windwp/nvim-autopairs',
     event = "InsertEnter",
-    config = true
-    -- use opts = {} for passing setup options
-    -- this is equalent to setup({}) function
+    config = true,
   },
-  { "terrortylor/nvim-comment",
+  {
+    "terrortylor/nvim-comment",
     lazy = false,
     keys = {
-        { "<Leader>/", "<CMD>CommentToggle<CR>", mode = { "n" } },
-        -- { "<C-_>", "<C-\\><C-N><CMD>CommentToggle<CR>ji", mode = { "i" } },
-        { "<Leader>/", ":'<,'>CommentToggle<CR>gv<esc>", mode = { "v" } },
+      { "<Leader>/", "<CMD>CommentToggle<CR>", mode = { "n" } },
+      { "<Leader>/", ":'<,'>CommentToggle<CR>gv<esc>", mode = { "v" } },
     },
-    main="nvim_comment",
-    config = true
+    main = "nvim_comment",
+    config = true,
   },
   {
     'stevearc/conform.nvim',
     opts = {
       formatters_by_ft = {
-        html = { { 'prettierd' } },
+        html = { 'prettierd', stop_after_first = true },
         lua = { 'stylua' },
         javascript = { 'eslint', 'biome' },
         javascriptreact = { 'eslint', 'biome' },
-        markdown = { { 'prettierd' } },
+        markdown = { 'prettierd', stop_after_first = true },
         typescript = { 'eslint', 'biome' },
         typescriptreact = { 'eslint', 'biome' },
         ['*'] = { 'trim_whitespace' },
-        python = { 'black', 'isort'},
+        python = { 'black', 'isort' },
         scss = { 'stylelint' },
         css = { 'stylelint', 'biome' },
         json = { 'biome' },
@@ -55,12 +53,13 @@ return {
       formatters = {
         prettierd = {
           condition = function()
-            return vim.loop.fs_realpath('.prettierrc.js') ~= nil or vim.loop.fs_realpath('.prettierrc.mjs') ~= nil
+            return (vim.uv or vim.loop).fs_realpath('.prettierrc.js') ~= nil
+              or (vim.uv or vim.loop).fs_realpath('.prettierrc.mjs') ~= nil
           end,
         },
         stylelint = {
           cwd = M.find_package_json,
-        }
+        },
       },
     },
     keys = {
@@ -69,8 +68,8 @@ return {
         function()
           require("conform").format({ async = true })
         end,
-        desc = "Format the current buffer"
-      }
-    }
+        desc = "Format the current buffer",
+      },
+    },
   },
 }

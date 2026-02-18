@@ -1,12 +1,3 @@
-local function active_linters()
-  local linters = require("lint").get_running()
-  if #linters == 0 then
-    return "Lint: 0"
-  else
-    return "Lint: " .. table.concat(linters, ", ")
-  end
-end
-
 return {
   {
     "cocopon/iceberg.vim",
@@ -22,37 +13,31 @@ return {
     end,
   },
   {
-    "norcalli/nvim-colorizer.lua",
+    "NvChad/nvim-colorizer.lua",
     event = "BufReadPre",
-    config = function()
-      require 'colorizer'.setup({
-        'css';
-        'scss';
-        'javascript';
-        'javascriptreact';
-        'typescript';
-        'typescriptreact';
-        'html';
-      }, { 
-        mode = 'background';
-        RRGGBBAA = true;
-        rgb_fn = true;
-        hsl_fn = true;
-        css = true;
-        css_fn = true;
-      })
-    end,
-
+    opts = {
+      filetypes = {
+        'css',
+        'scss',
+        'javascript',
+        'javascriptreact',
+        'typescript',
+        'typescriptreact',
+        'html',
+      },
+      user_default_options = {
+        mode = 'background',
+        RRGGBBAA = true,
+        rgb_fn = true,
+        hsl_fn = true,
+        css = true,
+        css_fn = true,
+      },
+    },
   },
-  -- {
-  --   "LazyVim/LazyVim",
-  --   opts = {
-  --     colorscheme = "iceberg",
-  --   },
-  -- },
   {
     "nvim-lualine/lualine.nvim",
-    dependencies = { "kyazdani42/nvim-web-devicons", opt = true },
+    dependencies = { "nvim-tree/nvim-web-devicons" },
     event = "VeryLazy",
     opts = {
       options = {
@@ -60,13 +45,7 @@ return {
         section_separators = "",
         component_separators = "",
       },
-      sections = {
-        lualine_c = {
-          { 'filename' },
-          { active_linters },
-        },
-      },
-    }
+    },
   },
   {
     "nvim-neo-tree/neo-tree.nvim",
@@ -75,7 +54,6 @@ return {
       "nvim-lua/plenary.nvim",
       "nvim-tree/nvim-web-devicons",
       "MunifTanjim/nui.nvim",
-      -- "3rd/image.nvim", -- Optional image support in preview window: See `# Preview Mode` for more information
     },
     opts = {
       close_if_last_window = true,
@@ -92,15 +70,9 @@ return {
       window = {
         mapping_options = {
           noremap = false,
-        }
+        },
       },
     },
-    -- config = function()
-      -- vim.fn.sign_define("DiagnosticSignError", {text = " ", texthl = "DiagnosticSignError"})
-      -- vim.fn.sign_define("DiagnosticSignWarn", {text = " ", texthl = "DiagnosticSignWarn"})
-      -- vim.fn.sign_define("DiagnosticSignInfo", {text = " ", texthl = "DiagnosticSignInfo"})
-      -- vim.fn.sign_define("DiagnosticSignHint", {text = "󰌵", texthl = "DiagnosticSignHint"})
-    -- end,
     keys = {
       { "<Leader>n", "<CMD>Neotree toggle<CR>", mode = { "n", "i", "v" } },
     },

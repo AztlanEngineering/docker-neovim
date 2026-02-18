@@ -4,18 +4,12 @@ return {
     event = "VeryLazy",
     lazy = false,
     version = false,
-    build = "make BUILD_FROM_SOURCE=true",
-    -- build = function()
-    -- -- conditionally use the correct build system for the current OS
-    --   if vim.fn.has("win32") == 1 then
-    --     return "powershell -ExecutionPolicy Bypass -File Build.ps1 -BuildFromSource false"
-    --   else
-    --     return "make"
-    --   end
-    -- end,
     opts = {
       provider = "claude", -- Main provider for chat/code generation
-      auto_suggestions_provider = "copilot", -- Free auto-suggestions
+      -- auto_suggestions_provider only works when copilot auth tokens are present
+      auto_suggestions_provider = vim.fn.filereadable(
+        vim.fn.expand("~/.config/github-copilot/hosts.json")
+      ) == 1 and "copilot" or "claude",
       providers = {
         claude = {
           endpoint = "https://api.anthropic.com",
@@ -63,7 +57,7 @@ return {
         return {}
       end,
     },
-    build = "make",
+    build = "make BUILD_FROM_SOURCE=true",
     dependencies = {
       "nvim-treesitter/nvim-treesitter",
       "stevearc/dressing.nvim", 
