@@ -45,6 +45,9 @@ RUN apk add --no-cache fzf # For telescope
 # LSP servers that ship glibc binaries - install via apk for musl compatibility
 RUN apk add --no-cache lua-language-server rust-analyzer
 
+# gcompat: glibc compatibility layer for host-built binaries (e.g. sem-lsp)
+RUN apk add --no-cache gcompat
+
 
 RUN adduser -D -u 1000 myuser
 ENV HOME=/home/myuser
