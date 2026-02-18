@@ -2,9 +2,10 @@
 -- The sem-lsp binary is volume-mounted into the container
 -- via the v2() function in df/config/zsh/aliases.sh.
 --
--- The LMDB store is project-local at .sem/lmdb/ inside the project directory.
+-- The LMDB store is project-local at .kg/lmdb/ inside the project directory
+-- (APP_NAME is still "kg" during the v2 transition).
 -- Since the project is mounted at /x/, the store is automatically available
--- at /x/.sem/lmdb/ -- no separate mount needed.
+-- at /x/.kg/lmdb/ -- no separate mount needed.
 --
 -- sem-lsp gracefully degrades: when sem.toml or the LMDB store is missing
 -- it runs in syntax-only mode (no completions/hover/graph diagnostics)
@@ -28,8 +29,8 @@ if not configs.sem_lsp then
       cmd_env = {
         -- Tell sem-lsp where sem.toml is (project always mounted at /x/)
         SEM_CONFIG_PATH = "/x/sem.toml",
-        -- Project-local store: project is always mounted at /x/
-        SEM_STORE_PATH = "/x/.sem/lmdb",
+        -- Project-local store: APP_NAME is still "kg" during v2 transition
+        SEM_STORE_PATH = "/x/.kg/lmdb",
         -- No daemon needed; sem-lsp reads directly from the project store
         SEM_DAEMON_AUTOSTART = "false",
       },
