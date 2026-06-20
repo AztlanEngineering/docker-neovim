@@ -22,16 +22,17 @@ require("lazy").setup({
     { import = "plugins" },
   },
   defaults = {
-    -- By default, only LazyVim plugins will be lazy-loaded. Your custom plugins will load during startup.
-    -- If you know what you're doing, you can set this to `true` to have all your custom plugins lazy-loaded by default.
+    -- Baked image: everything loads at startup (one-shot per file-open). Honest
+    -- eager default; per-spec event/cmd gates still apply where declared.
     lazy = false,
-    -- It's recommended to leave version=false for now, since a lot the plugin that support versioning,
-    -- have outdated releases, which may break your Neovim install.
-    version = false, -- always use the latest git commit
-    -- version = "*", -- try installing the latest stable version for plugins that support semver
+    -- Pinning is done by the committed lazy-lock.json; version is only the
+    -- resolution fallback for `Lazy update`. Do NOT set "*" — it would float
+    -- un-tagged plugins (snacks, treesitter main) and fight the lockfile.
+    version = false,
   },
-  install = { colorscheme = { "tokyonight", "habamax" } },
-  checker = { enabled = false }, -- disabled: plugins are baked into Docker image
+  install = { colorscheme = { "iceberg", "habamax" } }, -- iceberg is the theme; tokyonight isn't installed
+  checker = { enabled = false }, -- disabled: plugins are baked + digest-pinned
+  rocks = { enabled = false }, -- no plugin uses a rockspec; drops the lua5.1/luarocks apk set
   performance = {
     rtp = {
       -- disable some rtp plugins

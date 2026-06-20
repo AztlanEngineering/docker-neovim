@@ -1,0 +1,130 @@
+# syntax=docker/dockerfile:1.7
+########################################################################
+# fwrlines/nvim-base — heavy, rarely rebuilt, digest-pinned fleet artifact.
+#
+# Rebuild ONLY for: alpine/nvim bump, a plugin-set change with a NATIVE build
+# (today only tree-sitter parsers), a parser-list change (lua/config/parsers.lua),
+# a Mason package-set change, an ai.lua toggle flip, or an npm tool bump.
+# Every config-behavior edit (keymaps/options/autocmds/preferences) lives in the
+# thin Dockerfile and does NOT rebuild this image.
+#
+# Diamond multi-stage: runtime-root -> builder (owns gcc + tree-sitter-cli)
+#                                   -> final  (runtime-root + COPY --from=builder)
+# No compiler ever ships in `final`.
+########################################################################
+
+# Pin tag (human intent) AND digest (machine truth; tags are mutable). 3.24 ==
+# nvim 0.12.2, required by nvim-treesitter `main` (hard-errors below 0.12).
+# Index (multi-arch) digest captured via `docker buildx imagetools inspect`.
+ARG ALPINE_DIGEST=sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
+FROM alpine:3.24@${ALPINE_DIGEST} AS runtime-root
+
+LABEL maintainer="fwrlines <hello@fwrlines.com>"
+
+# ---- runtime apk set: ONLY what the editor needs at RUN time ----
+# Dropped vs the old single-stage file: build-base/gcc/musl-dev/tree-sitter-cli
+# (-> builder only), rust/cargo (avante gone), lua5.1/lua5.1-dev/luarocks (rocks
+# disabled), py3-pynvim (no python remote plugin), uv (no consumer).
+RUN apk add --no-cache \
+      neovim neovim-doc \
+      git curl bash \
+      ripgrep fd fzf \
+      python3 \
+      nodejs npm \
+      lua-language-server rust-analyzer \
+      gcompat
+# gcompat: glibc shim ONLY for the host-mounted sem-lsp (lua/plugins/sem-lsp.lua).
+# Delete in Phase 2 the day sem-lsp ships musl, so glibc binaries fail fast.
+
+RUN adduser -D -u 1000 myuser
+ENV HOME=/home/myuser
+# Project-local node bins APPENDED (not prepended): a mounted repo at /x must not
+# shadow git/node/rg for the agent session.
+ENV PATH="$PATH:./node_modules/.bin"
+
+########################################################################
+# builder: the ONLY stage that owns a compiler. Its debris never ships.
+########################################################################
+FROM runtime-root AS builder
+
+# The parser-compiler set. tree-sitter-cli is the APK build (musl); the npm one
+# ships a glibc binary. build-base = gcc + make + musl-dev.
+RUN apk add --no-cache build-base tree-sitter-cli
+
+USER 1000:1000
+WORKDIR /home/myuser
+RUN mkdir -p /home/myuser/.config/nvim/lua/config
+
+# --- COPY ORDER (cache geometry): rarely-changed + resolution-affecting first ---
+# init.lua + stylua.toml + committed lockfile: rarely change.
+COPY --chown=1000:1000 init.lua stylua.toml lazy-lock.json /home/myuser/.config/nvim/
+# lazy bootstrap: rarely changes.
+COPY --chown=1000:1000 lua/config/lazy.lua /home/myuser/.config/nvim/lua/config/lazy.lua
+# ai.lua: read at SPEC-PARSE time by completion.lua/copilot.lua (it gates which
+# specs exist), so it must be REAL content before any Lazy command. Rarely changes.
+COPY --chown=1000:1000 lua/config/ai.lua /home/myuser/.config/nvim/lua/config/ai.lua
+# parsers.lua: read by the bake script AND by treesitter.lua. Real, before baking.
+COPY --chown=1000:1000 lua/config/parsers.lua /home/myuser/.config/nvim/lua/config/parsers.lua
+# plugin specs: the heavy trigger. Must sit above the install layer.
+COPY --chown=1000:1000 lua/plugins /home/myuser/.config/nvim/lua/plugins
+
+# Stub the config files init.lua require()s but that do NOT affect plugin
+# resolution, so editing a keymap never busts the install/bake layers. The thin
+# image supplies their real content.
+RUN touch /home/myuser/.config/nvim/lua/config/options.lua \
+          /home/myuser/.config/nvim/lua/config/autocmds.lua \
+          /home/myuser/.config/nvim/lua/config/keymaps.lua \
+          /home/myuser/.config/nvim/lua/config/preferences.lua
+
+# ---- PLUGIN LAYER ----
+# install (install.missing=true clones absent plugins AND runs build hooks) THEN
+# restore (checks every plugin out to the committed lazy-lock.json). Two steps:
+# `restore` alone is not documented to install-missing; `install` is. This pins
+# the closure to the lockfile regardless of restore's undocumented behavior.
+RUN nvim --headless "+Lazy! install" +qall \
+ && nvim --headless "+Lazy! restore" +qall
+
+# ---- PARSER BAKE (the one native build) ----
+# Synchronous, serial, asserted. Replaces the async "+TSUpdate +qall" no-op.
+# Hard-fails the build if any parser is missing.
+COPY --chown=1000:1000 build/install-parsers.lua /tmp/install-parsers.lua
+RUN nvim --headless "+luafile /tmp/install-parsers.lua" && rm /tmp/install-parsers.lua
+
+# ---- MASON BAKE (Mason STILL present in Phase 1; removed in Phase 2) ----
+# The two headless commands the config defines (mason.lua). The deprecation
+# traceback they print is benign (exit 0); Phase 2 removes Mason entirely.
+RUN nvim --headless "+MasonInstallAllLsps" +qall \
+ && nvim --headless "+MasonInstallAllPackages" +qall \
+ && { npm cache clean --force || true; }
+
+########################################################################
+# final: runtime-root + built artifacts. No compiler. This is the shipped image.
+########################################################################
+FROM runtime-root AS final
+ARG GIT_SHA=unknown
+LABEL org.opencontainers.image.source="https://github.com/AztlanEngineering/docker-neovim" \
+      org.opencontainers.image.revision="${GIT_SHA}"
+
+USER 1000:1000
+WORKDIR /home/myuser
+
+# ONE data copy covers lazy plugins (incl. the nvim-treesitter query corpus),
+# site/parser/*.so, and mason — all live under data/.
+COPY --from=builder --chown=1000:1000 \
+     /home/myuser/.local/share/nvim /home/myuser/.local/share/nvim
+# The config snapshot install/restore/bake ran against (stubs included; the thin
+# image overwrites the real ones). Keeps base self-consistent and runnable alone.
+COPY --from=builder --chown=1000:1000 \
+     /home/myuser/.config/nvim /home/myuser/.config/nvim
+
+# ---- BUILD-TIME ASSERTIONS: fail HERE, not three weeks later mid-edit. ----
+RUN for t in nvim git rg fd node npm lua-language-server rust-analyzer; do \
+      command -v "$t" >/dev/null || { printf 'ASSERT FAIL: tool not found: %s\n' "$t"; exit 1; }; \
+    done \
+ && nvim --headless \
+      -c 'lua assert(#vim.api.nvim_get_runtime_file("parser/lua.so", false) > 0, "parsers not baked")' \
+      -c 'lua assert(vim.uv.fs_stat(vim.fn.stdpath("data").."/mason/bin/typescript-language-server"), "mason ts_ls missing")' \
+      -c 'qa'
+
+WORKDIR /x/
+ENTRYPOINT ["nvim"]
