@@ -5,3 +5,5 @@ require("config.options")
 require("config.lazy")
 require("config.autocmds")
 require("config.keymaps")
+-- Personal override layer, LAST so it wins. Comment out to run base-only.
+require("config.preferences")

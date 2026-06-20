@@ -84,34 +84,5 @@ return {
       },
     },
   },
-  {
-    "nvim-neo-tree/neo-tree.nvim",
-    branch = "v3.x",
-    dependencies = {
-      "nvim-lua/plenary.nvim",
-      "nvim-tree/nvim-web-devicons",
-      "MunifTanjim/nui.nvim",
-    },
-    opts = {
-      close_if_last_window = true,
-      popup_border_style = "rounded",
-      sort_case_insensitive = true,
-      enable_git_status = true,
-      filesystem = {
-        filtered_items = {
-          visible = true,
-          hide_dotfiles = false,
-          hide_gitignored = true,
-        },
-      },
-      window = {
-        mapping_options = {
-          noremap = false,
-        },
-      },
-    },
-    keys = {
-      { "<Leader>n", "<CMD>Neotree toggle<CR>", mode = { "n", "i", "v" } },
-    },
-  },
+  -- File explorer is now snacks.explorer (see snacks.lua); neo-tree removed.
 }

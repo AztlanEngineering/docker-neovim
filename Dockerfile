@@ -65,7 +65,8 @@ COPY lua/plugins $HOME/.config/nvim/lua/plugins
 # (real files are copied later to avoid cache-busting heavy installs)
 RUN touch $HOME/.config/nvim/lua/config/options.lua \
           $HOME/.config/nvim/lua/config/autocmds.lua \
-          $HOME/.config/nvim/lua/config/keymaps.lua
+          $HOME/.config/nvim/lua/config/keymaps.lua \
+          $HOME/.config/nvim/lua/config/preferences.lua
 
 RUN chown 1000:1000 -R "$HOME"
 USER 1000:1000
@@ -86,6 +87,7 @@ RUN nvim --headless "+MasonInstallAllLsps" +qall
 COPY --chown=1000:1000 lua/config/options.lua $HOME/.config/nvim/lua/config/options.lua
 COPY --chown=1000:1000 lua/config/keymaps.lua $HOME/.config/nvim/lua/config/keymaps.lua
 COPY --chown=1000:1000 lua/config/autocmds.lua $HOME/.config/nvim/lua/config/autocmds.lua
+COPY --chown=1000:1000 lua/config/preferences.lua $HOME/.config/nvim/lua/config/preferences.lua
 
 WORKDIR /x/
 
