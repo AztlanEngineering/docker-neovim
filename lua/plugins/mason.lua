@@ -77,7 +77,10 @@ return {
     },
     opts = {
       ensure_installed = servers,
-      automatic_enable = true,
+      -- Whitelist exactly the LSP servers; passing `true` would also try to
+      -- enable Mason *packages* like stylua (a formatter) as if they were
+      -- language servers, attaching a spurious stylua client to every buffer.
+      automatic_enable = servers,
     },
   },
 }

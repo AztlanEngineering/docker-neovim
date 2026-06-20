@@ -40,4 +40,7 @@ RUN nvim --headless "+Lazy! install" "+Lazy! restore" "+Lazy! clean" +qall
 # Smoke: the full real config (options/keymaps/preferences) loads headless.
 RUN nvim --headless "+lua print('config ok')" +qall
 
-# WORKDIR /x/ and ENTRYPOINT ["nvim"] are inherited from the base.
+# Restore the project workdir. A child WORKDIR in this stage (above) overrides
+# the base's, so it must be set again explicitly — it is NOT inherited once
+# overridden. ENTRYPOINT ["nvim"] IS inherited from the base.
+WORKDIR /x/
