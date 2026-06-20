@@ -33,29 +33,36 @@ return {
   },
   {
     "stevearc/conform.nvim",
+    -- Arm format-on-save: without a load trigger, conform is keys-only lazy and
+    -- its BufWritePre autocmd never registers in a fresh --rm container.
+    event = { "BufWritePre" },
+    cmd = { "ConformInfo" },
     opts = {
+      -- NOTE (Phase 2): the JS/TS/CSS formatter set still references binaries
+      -- not yet in the image (biome, prettierd, black, isort, stylelint) and
+      -- gets consolidated onto biome + ruff in Phase 2. Phase 0 only removes the
+      -- invalid "eslint" formatter name (no such conform builtin).
       formatters_by_ft = {
         html = { "prettierd", stop_after_first = true },
         lua = { "stylua" },
-        javascript = { "eslint", "biome" },
-        javascriptreact = { "eslint", "biome" },
+        javascript = { "biome" },
+        javascriptreact = { "biome" },
         markdown = { "prettierd", stop_after_first = true },
-        typescript = { "eslint", "biome" },
-        typescriptreact = { "eslint", "biome" },
+        typescript = { "biome" },
+        typescriptreact = { "biome" },
         ["*"] = { "trim_whitespace" },
         python = { "black", "isort" },
         scss = { "stylelint" },
         css = { "stylelint", "biome" },
         json = { "biome" },
       },
-      log_level = vim.log.levels.DEBUG,
       format_on_save = function(bufnr)
         if not format_on_save or format_disabled_bufs[bufnr] then
           return
         end
         return {
-          timeout_ms = 500,
-          lsp_fallback = true,
+          timeout_ms = 1000,
+          lsp_format = "fallback",
         }
       end,
       formatters = {

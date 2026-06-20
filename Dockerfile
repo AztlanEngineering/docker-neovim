@@ -23,9 +23,6 @@ RUN apk add --no-cache lua5.1 lua5.1-dev luarocks
 RUN apk add --no-cache ripgrep
 RUN luarocks-5.1 install luarocks
 
-# for Avante
-RUN apk add rust cargo
-
 # For telescope
 RUN apk add --no-cache fd
 
@@ -33,7 +30,6 @@ RUN apk add --no-cache fd
 RUN apk add --no-cache nodejs npm uv
 # tree-sitter-cli: use Alpine native package (npm version ships glibc binary)
 RUN apk add --no-cache tree-sitter-cli
-RUN npm i -g mcp-hub@latest claude
 
 # LSP, CMP
 # Add path so that we can exec the node modules from vim
@@ -60,6 +56,9 @@ COPY stylua.toml $HOME/.config/nvim/stylua.toml
 
 # Copy lazy bootstrap and plugin specs (trigger full install on change)
 COPY lua/config/lazy.lua $HOME/.config/nvim/lua/config/lazy.lua
+# ai.lua is required BY the plugin specs (toggle read at spec-parse), so it
+# needs real content here, not a stub. It changes rarely.
+COPY lua/config/ai.lua $HOME/.config/nvim/lua/config/ai.lua
 COPY lua/plugins $HOME/.config/nvim/lua/plugins
 
 # Create stubs for config files required by init.lua
@@ -74,24 +73,19 @@ USER 1000:1000
 # Install all plugins via Lazy
 RUN nvim --headless "+Lazy! install" +qall
 
-# Build avante from source for Alpine Linux compatibility
-# Use --mount=type=cache to persist Cargo build artifacts across rebuilds
-RUN --mount=type=cache,target=/home/myuser/.cargo/registry,uid=1000,gid=1000 \
-    --mount=type=cache,target=/home/myuser/.local/share/nvim/lazy/avante.nvim/build/.cargo,uid=1000,gid=1000 \
-    cd /home/myuser/.local/share/nvim/lazy/avante.nvim && rm -rf build/* && make BUILD_FROM_SOURCE=true
-
 RUN nvim --headless "+TSUpdate" +qall
 RUN nvim --headless "+Lazy! sync" +qall
 RUN nvim --headless "+MasonInstallAllPackages" +qall
 RUN nvim --headless "+MasonInstallAllLsps" +qall
 
+# (clipboard) ENV TMUX=foo removed: it poisoned OSC52 clipboard detection.
+# Clipboard provider is configured explicitly in lua; TERM/COLORTERM come
+# through v2() so foot's truecolor + OSC52 work.
+
 # Copy config files last (change most often, no heavy rebuild needed)
 COPY --chown=1000:1000 lua/config/options.lua $HOME/.config/nvim/lua/config/options.lua
 COPY --chown=1000:1000 lua/config/keymaps.lua $HOME/.config/nvim/lua/config/keymaps.lua
 COPY --chown=1000:1000 lua/config/autocmds.lua $HOME/.config/nvim/lua/config/autocmds.lua
-
-# Ugly fix https://github.com/tmux/tmux/issues/3983
-ENV TMUX=foo
 
 WORKDIR /x/
 
