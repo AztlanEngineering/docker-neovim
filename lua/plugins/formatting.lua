@@ -22,39 +22,43 @@ return {
     config = true,
   },
   {
-    "terrortylor/nvim-comment",
-    lazy = false,
-    keys = {
-      { "<Leader>/", "<CMD>CommentToggle<CR>", mode = { "n" }, desc = "Toggle comment" },
-      { "<Leader>/", ":'<,'>CommentToggle<CR>gv<esc>", mode = { "v" }, desc = "Toggle comment (visual)" },
-    },
-    main = "nvim_comment",
-    config = true,
-  },
-  {
     "stevearc/conform.nvim",
     -- Arm format-on-save: without a load trigger, conform is keys-only lazy and
     -- its BufWritePre autocmd never registers in a fresh --rm container.
     event = { "BufWritePre" },
     cmd = { "ConformInfo" },
     opts = {
-      -- NOTE (Phase 2): the JS/TS/CSS formatter set still references binaries
-      -- not yet in the image (biome, prettierd, black, isort, stylelint) and
-      -- gets consolidated onto biome + ruff in Phase 2. Phase 0 only removes the
-      -- invalid "eslint" formatter name (no such conform builtin).
+      -- Tool SOURCE model (glibc image):
+      --   PROJECT tools resolve from the mounted working env on PATH (project
+      --   node_modules/.bin + venv) so the version MATCHES the project — never
+      --   baked, no version mismatch. If a project lacks the tool, conform
+      --   silently skips that filetype (graceful). These: biome (js/ts/json/css),
+      --   ruff (python), prettier (markdown/html).
+      --   EDITOR tools are baked (not project-versioned): stylua (lua), shfmt (sh).
+      -- glibc base => host-built project binaries run natively in the container.
       formatters_by_ft = {
-        html = { "prettierd", stop_after_first = true },
-        lua = { "stylua" },
-        javascript = { "biome" },
+        lua = { "stylua" }, -- baked
+        sh = { "shfmt" }, -- baked
+        python = { "ruff_organize_imports", "ruff_format" }, -- project venv
+        javascript = { "biome" }, -- project node_modules
         javascriptreact = { "biome" },
-        markdown = { "prettierd", stop_after_first = true },
         typescript = { "biome" },
         typescriptreact = { "biome" },
-        ["*"] = { "trim_whitespace" },
-        python = { "black", "isort" },
-        scss = { "stylelint" },
-        css = { "stylelint", "biome" },
         json = { "biome" },
+        jsonc = { "biome" },
+        css = { "biome" },
+        scss = { "biome" },
+        markdown = { "prettier" }, -- project node_modules (none -> skipped)
+        html = { "prettier" },
+        ["_"] = { "trim_whitespace" }, -- fallback for any unlisted filetype
+      },
+      -- Resolve PROJECT formatters by walking UP from the file to the nearest
+      -- node_modules/.bin (monorepo per-package/hoisted layouts: bun isolated
+      -- installs scatter biome across configs/*/ and packages/*/, never root).
+      -- Baked tools (stylua/shfmt) ignore this and use the image PATH.
+      formatters = {
+        biome = { prefer_local = "node_modules/.bin" },
+        prettier = { prefer_local = "node_modules/.bin" },
       },
       format_on_save = function(bufnr)
         if not format_on_save or format_disabled_bufs[bufnr] then
@@ -65,20 +69,11 @@ return {
           lsp_format = "fallback",
         }
       end,
-      formatters = {
-        prettierd = {
-          condition = function()
-            return (vim.uv or vim.loop).fs_realpath(".prettierrc.js") ~= nil
-              or (vim.uv or vim.loop).fs_realpath(".prettierrc.mjs") ~= nil
-          end,
-        },
-        stylelint = {
-          cwd = M.find_package_json,
-        },
-      },
     },
     config = function(_, opts)
       require("conform").setup(opts)
+      -- No not-found notice: under mount-cwd it is NORMAL for project tools to be
+      -- absent. Status is queried on demand via :ToolStatus (lua/config/tools.lua).
 
       -- :FormatToggle - toggle format-on-save globally
       vim.api.nvim_create_user_command("FormatToggle", function()

@@ -27,6 +27,10 @@ RUN rm -rf /home/myuser/.config/nvim/lua /home/myuser/.config/nvim/init.lua
 # copied so the thin restore pins against the SAME lock as the base.
 COPY --chown=1000:1000 init.lua stylua.toml lazy-lock.json /home/myuser/.config/nvim/
 COPY --chown=1000:1000 lua /home/myuser/.config/nvim/lua
+# Native LSP config dirs (outside lua/): the lsp/ bespoke servers + after/lsp/
+# overrides. Real content lands here (base only had the stub lsp.lua).
+COPY --chown=1000:1000 lsp /home/myuser/.config/nvim/lsp
+COPY --chown=1000:1000 after /home/myuser/.config/nvim/after
 
 # Delta plugin sync against the base's already-populated store:
 #   * keymap/option/opts-only edit -> restore is a no-op (lockfile unchanged)

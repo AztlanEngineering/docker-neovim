@@ -4,12 +4,10 @@ return {
     event = "VeryLazy",
     opts = {
       spec = {
-        { "<leader>a", group = "Avante" },
-        { "<leader>C", group = "Claude" },
+        { "<leader>f", group = "Find" }, -- snacks pickers
+        { "<leader>h", group = "Git hunks" }, -- gitsigns
+        { "<leader>l", group = "LSP/Tools" }, -- ToolStatus, inlay hints
         { "<leader>x", group = "Trouble" },
-        { "<leader>m", group = "MCP" },
-        { "<leader>l", group = "Logs" },
-        { "<leader>r", group = "Refactor" },
       },
     },
   },
@@ -61,7 +59,21 @@ return {
       },
       sections = {
         lualine_a = { "mode" },
-        lualine_b = { "branch", "diff", "diagnostics" },
+        lualine_b = {
+          "branch",
+          -- Source diff counts from gitsigns (lualine's diff otherwise spawns
+          -- its own `git diff` job and can disagree with the gutter).
+          {
+            "diff",
+            source = function()
+              local gs = vim.b.gitsigns_status_dict
+              if gs then
+                return { added = gs.added, modified = gs.changed, removed = gs.removed }
+              end
+            end,
+          },
+          "diagnostics",
+        },
         lualine_c = { "filename" },
         lualine_x = {
           -- Show attached LSP server names

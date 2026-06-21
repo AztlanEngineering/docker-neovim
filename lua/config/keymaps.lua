@@ -33,6 +33,11 @@ map("n", "<Leader>w", function() Snacks.picker.grep_word() end, { desc = "Grep w
 map("n", "<Leader>e", ":e!<CR>", { desc = "Reload file (discard changes)" })
 map("n", "<Leader><Space>", ":w<CR>", { desc = "Save file" })
 
+-- Comment toggle on <Leader>/ (kept muscle memory), via native gc (0.10+;
+-- nvim-comment plugin removed). gcc/gc operators also work natively.
+map("n", "<Leader>/", "gcc", { remap = true, desc = "Toggle comment" })
+map("x", "<Leader>/", "gc", { remap = true, desc = "Toggle comment" })
+
 -- Exit terminal mode
 map("t", "<Esc>", "<C-\\><C-n>", { silent = true, desc = "Exit terminal mode" })
 

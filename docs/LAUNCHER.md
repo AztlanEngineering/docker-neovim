@@ -117,3 +117,23 @@ consumes `ANTHROPIC_API_KEY`. The injection block can be **removed** from
   decision; snacks currently accepts per-session reset).
 - **Quality** — `.gitconfig` (read-only) + `GIT_AUTHOR_*`/`GIT_COMMITTER_*` for
   in-container checkpoint commits; a no-git-repo guard; `file:line` open syntax.
+
+---
+
+## v3 — the refreshed launcher (`bin/v3.sh`)
+
+`bin/v3.sh` (committed, executable) launches the **refreshed glibc image** (Phases 0–2),
+parallel to `v2` during the transition. Alias it: `alias v3="$HOME/code/az/docker-neovim/bin/v3.sh"`
+(or symlink into your PATH).
+
+**Contract (differs from v2):**
+- **glibc image** (`fwrlines/nvim3`) — host-built project tools (biome/ruff/venvs/sem-lsp) run natively (no gcompat).
+- **No ANTHROPIC key** injected — Phase 0 stripped AI to a toggleable Copilot. (Copilot config still mounted read-only when present.)
+- **Doppler downloaded once** (v2 did it twice).
+- **TERM/COLORTERM forwarded** — truecolor + undercurl from foot.
+- **git identity** (`GIT_AUTHOR_*`/`GIT_COMMITTER_*`) for in-container checkpoint commits; push/creds stay host-side.
+- **Host-global tools, per-tool opt-in:** `sem-lsp` mounted by default; add more with `--host-tool NAME` (repeatable) or `V3_HOST_TOOLS="biome ruff"`. NOT a blanket `~/.local/bin` mount.
+- **Mount = cwd** (like v2): launch from the **repo root** when you want a monorepo's full toolchain (tools above the mount aren't visible — see TOOL-RESOLUTION-STORIES.md).
+- `V3_DOCKER=podman` for rootless-podman hosts; `NVIM_IMAGE=...` overrides the image (TODO: read from `core/versions.env` after the GHCR push).
+
+**Tooling status in-editor:** `:ToolStatus` (or `<leader>li`) reports, for the current buffer, which LSPs/formatters are active vs absent and where each resolved from (project node_modules / venv / baked / host-mount / not found) — the on-demand `:ALEInfo` analogue. It is normal for project tools to be absent; status is pulled, not pushed.

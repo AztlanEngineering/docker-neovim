@@ -3,6 +3,7 @@ vim.g.mapleader = ","
 
 require("config.options")
 require("config.lazy")
+require("config.lsp") -- native LSP activation (after lazy, so lsp/ data is on rtp)
 require("config.autocmds")
 require("config.keymaps")
 -- Personal override layer, LAST so it wins. Comment out to run base-only.

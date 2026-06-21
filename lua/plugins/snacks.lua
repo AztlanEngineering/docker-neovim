@@ -25,7 +25,12 @@ return {
     priority = 1000,
     lazy = false,
     opts = {
-      bigfile = { enabled = true },
+      -- WIRED MODULES (the disciplined list — do NOT let this sprawl).
+      -- snacks is justified ONLY as the picker+explorer+input collapse
+      -- (replaced telescope+fzf-native+neo-tree+nui+dressing). Everything else
+      -- is explicitly OFF below so the boundary is visible in the config, not
+      -- just in intention.
+      bigfile = { enabled = true }, -- auto-degrade on huge files (cheap safety)
       input = { enabled = true }, -- replaces dressing's vim.ui.input
       notifier = { enabled = true }, -- notifications + LSP progress surface
       picker = {
@@ -37,6 +42,19 @@ return {
           explorer = { hidden = true, ignored = false },
         },
       },
+
+      -- DELIBERATELY OFF (host workflow covers these, or Cozette/--rm-hostile,
+      -- or redundant). Flip on only with a reason.
+      dashboard = { enabled = false }, -- v3 opens a file directly; no startup screen
+      terminal = { enabled = false }, -- terminal mux is the host's job (tmux/sway)
+      scroll = { enabled = false }, -- smooth scroll feels laggy over the boundary
+      animate = { enabled = false },
+      statuscolumn = { enabled = false }, -- lualine + gitsigns own the gutter
+      indent = { enabled = false },
+      scope = { enabled = false },
+      words = { enabled = false }, -- revisit if symbol-occurrence highlight wanted
+      zen = { enabled = false },
+      dim = { enabled = false },
     },
   },
 }

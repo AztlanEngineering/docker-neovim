@@ -1,0 +1,91 @@
+-- Native LSP activation (Neovim 0.12 lsp/ idiom). Required from init.lua AFTER
+-- config.lazy, so nvim-lspconfig's lsp/ data is on the runtimepath first.
+--
+-- Servers with NO file in lsp/ or after/lsp/ are configured entirely by
+-- nvim-lspconfig's shipped lsp/<name>.lua data. Overrides live in after/lsp/
+-- (plugin lsp/ data would otherwise win on key conflicts); the one bespoke
+-- server (sem_lsp) lives in plain lsp/.
+
+-- Turtle/RDF: nvim's .ttl detection otherwise yields 'teraterm' for comment-first
+-- files (it even ships syntax/teraterm.vim). Force turtle for every .ttl.
+vim.filetype.add({ extension = { ttl = "turtle" } })
+
+-- :ToolStatus — on-demand "what LSP/formatter state do I have for this buffer,
+-- and where did each tool resolve from?" (the :ALEInfo analogue). Under
+-- mount-cwd it is normal for project tools to be absent; status is pulled, not
+-- pushed as notices.
+require("config.tools").setup()
+vim.keymap.set("n", "<leader>li", "<cmd>ToolStatus<cr>", { desc = "Tooling status (LSP/format)" })
+
+-- Advertise blink.cmp's completion capabilities to EVERY server. '*' is the
+-- lowest-priority layer; per-server (and after/lsp/) configs merge on top.
+-- pcall keeps the headless Docker build pass working if blink isn't loadable yet.
+local ok, blink = pcall(require, "blink.cmp")
+if ok then
+  vim.lsp.config("*", { capabilities = blink.get_lsp_capabilities() })
+end
+
+-- Diagnostics. 0.11+ defaults virtual_text OFF; without this the editor shows
+-- almost nothing. jump.float=true keeps the core [d/]d jumps showing the float.
+vim.diagnostic.config({
+  virtual_text = { current_line = true, source = "if_many" },
+  severity_sort = true,
+  float = { border = "rounded", source = true },
+  jump = { float = true },
+})
+
+-- Activate servers. Tool SOURCE model (glibc image — host glibc binaries run):
+--   BAKED in image (always available): lua_ls, rust_analyzer (tarballs);
+--     basedpyright, ts_ls, bashls, yamlls, jsonls, html (npm).
+--   MOUNTED from the project working env (executable-guarded below):
+--     ruff (project venv), sem_lsp (host-built bind-mount), project-local LSPs.
+--     These are glibc and run natively in the glibc image.
+vim.lsp.enable({
+  "lua_ls", "rust_analyzer", -- tarball (system)
+  "bashls", "cssls", "jsonls", "html", "ts_ls", "yamlls", -- npm
+  "basedpyright", -- python types (always-on, baked)
+})
+
+-- Project-env tools: enable only when the binary resolves on PATH (the mounted
+-- venv / bind-mount supplies it). No binary -> not enabled -> no spawn error.
+-- ruff = project-pinned lint/format from the venv; not baked, so a venv-less
+-- project just gets no ruff (basedpyright still provides types).
+if vim.fn.executable("ruff") == 1 then
+  vim.lsp.enable("ruff")
+end
+-- sem_lsp = host-built Turtle/RDF server, bind-mounted by the launcher.
+if vim.fn.executable("sem-lsp") == 1 then
+  vim.lsp.enable("sem_lsp")
+end
+
+-- LspAttach: ONLY the delta over 0.11/0.12 defaults. Defaults already ship
+-- grn/grr/gri/gra/grt/grx/gO/K/<C-s>/[d/]d/<C-w>d and document_color (0.12).
+vim.api.nvim_create_autocmd("LspAttach", {
+  group = vim.api.nvim_create_augroup("user.lsp", { clear = true }),
+  callback = function(args)
+    local client = assert(vim.lsp.get_client_by_id(args.data.client_id))
+    local function map(lhs, rhs, desc)
+      vim.keymap.set("n", lhs, rhs, { buffer = args.buf, desc = desc })
+    end
+
+    map("gd", vim.lsp.buf.definition, "Go to definition")
+    map("gD", vim.lsp.buf.declaration, "Go to declaration")
+    map("<leader>lh", function()
+      vim.lsp.inlay_hint.enable(
+        not vim.lsp.inlay_hint.is_enabled({ bufnr = args.buf }),
+        { bufnr = args.buf }
+      )
+    end, "Toggle inlay hints")
+
+    -- Paired-tag/identifier rename for html + ts (0.12). Filter takes client_id only.
+    if client:supports_method("textDocument/linkedEditingRange") then
+      vim.lsp.linked_editing_range.enable(true, { client_id = client.id })
+    end
+
+    -- ruff complements basedpyright (lint/format); its hover is noise next to
+    -- basedpyright's type hover. Let basedpyright own K.
+    if client.name == "ruff" then
+      client.server_capabilities.hoverProvider = false
+    end
+  end,
+})

@@ -150,10 +150,15 @@ COPY --chown=1000:1000 lua/config/parsers.lua /home/myuser/.config/nvim/lua/conf
 COPY --chown=1000:1000 lua/plugins /home/myuser/.config/nvim/lua/plugins
 
 # Stub behavior-only config files so editing a keymap never busts install/bake.
+# lsp.lua is stubbed too: init.lua requires config.lsp at startup (the build
+# passes boot nvim), but it only ENABLES servers at runtime — no build value, and
+# stubbing keeps an enable-list edit from busting the install/bake layers.
 RUN touch /home/myuser/.config/nvim/lua/config/options.lua \
           /home/myuser/.config/nvim/lua/config/autocmds.lua \
           /home/myuser/.config/nvim/lua/config/keymaps.lua \
-          /home/myuser/.config/nvim/lua/config/preferences.lua
+          /home/myuser/.config/nvim/lua/config/preferences.lua \
+          /home/myuser/.config/nvim/lua/config/lsp.lua \
+          /home/myuser/.config/nvim/lua/config/tools.lua
 
 # ---- PLUGIN LAYER ----
 # install (clones missing + runs build hooks) THEN restore (pins to lazy-lock.json).
