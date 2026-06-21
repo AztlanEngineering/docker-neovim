@@ -23,7 +23,7 @@ local function origin(path)
   if path:match("^/x/") then
     return "mounted project"
   end
-  if path:match("^/usr/local/bin/") or path:match("^/opt/") then
+  if path:match("^/usr/local/bin/") or path:match("^/usr/bin/") or path:match("^/opt/") then
     return "baked (image)"
   end
   return path
@@ -46,54 +46,50 @@ function M.status(bufnr)
   add("")
 
   -- LSP --------------------------------------------------------------------
-  add("## LSP")
+  add("## LSP (attached)")
   local attached = vim.lsp.get_clients({ bufnr = bufnr })
   if #attached == 0 then
-    add("  attached: (none)")
+    add("  (none)")
   else
     for _, c in ipairs(attached) do
-      local cmd = type(c.config.cmd) == "table" and c.config.cmd[1] or "<fn>"
-      local p, og = resolve(cmd)
-      add(("  attached: %-16s  cmd=%s  [%s]"):format(c.name, p ~= "" and p or cmd, og))
-    end
-  end
-  -- Configured-but-not-attached servers that match this filetype.
-  local seen = {}
-  for _, c in ipairs(attached) do
-    seen[c.name] = true
-  end
-  local cfgs = vim.lsp.config and vim.lsp.config._configs or {}
-  for name, cfg in pairs(type(cfgs) == "table" and cfgs or {}) do
-    if not seen[name] and type(cfg) == "table" and cfg.filetypes then
-      for _, f in ipairs(cfg.filetypes) do
-        if f == ft then
-          local cmd = type(cfg.cmd) == "table" and cfg.cmd[1] or nil
-          local p, og = cmd and resolve(cmd) or { nil, "n/a" }, "n/a"
-          add(("  configured (not attached): %-16s  [%s]"):format(name, cmd and origin(vim.fn.exepath(cmd)) or "no cmd"))
-          break
-        end
+      -- cmd may be a table (resolve bin[1]) or a function (in-process / dynamic).
+      local cmd = type(c.config.cmd) == "table" and c.config.cmd[1] or nil
+      if cmd then
+        local p, og = resolve(cmd)
+        add(("  %-16s running  cmd=%s  [%s]"):format(c.name, p ~= "" and p or cmd, og))
+      else
+        add(("  %-16s running  cmd=<function>"):format(c.name))
       end
     end
   end
 
   -- Formatters (conform) ---------------------------------------------------
+  -- list_formatters_for_buffer = all CONFIGURED for this ft (incl. unavailable),
+  -- which is the question this tool answers ("why didn't biome run? -> NOT FOUND").
+  -- list_formatters_to_run would hide the absent ones.
   add("")
   add("## Formatters (conform)")
   local ok, conform = pcall(require, "conform")
   if not ok then
     add("  conform not loaded")
   else
-    local fmts = conform.list_formatters_to_run(bufnr)
-    if #fmts == 0 then
+    local names = conform.list_formatters_for_buffer(bufnr) or {}
+    if #names == 0 then
       add("  (none configured for this filetype)")
     end
-    for _, f in ipairs(fmts) do
-      local p = f.command and vim.fn.exepath(f.command) or ""
-      add(("  %-22s %s  [%s]"):format(
-        f.name,
-        f.available and "available" or "NOT FOUND",
-        f.available and origin(p) or "—"
-      ))
+    for _, name in ipairs(names) do
+      local info = conform.get_formatter_info(name, bufnr)
+      local builtin = not (info and info.command and info.command ~= name)
+      local p = info and info.command and vim.fn.exepath(info.command) or ""
+      local where
+      if not info or not info.available then
+        where = "NOT FOUND"
+      elseif builtin and p == "" then
+        where = "builtin"
+      else
+        where = origin(p)
+      end
+      add(("  %-22s %s  [%s]"):format(name, (info and info.available) and "available" or "absent", where))
     end
   end
 

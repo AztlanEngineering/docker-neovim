@@ -123,8 +123,14 @@ consumes `ANTHROPIC_API_KEY`. The injection block can be **removed** from
 ## v3 — the refreshed launcher (`bin/v3.sh`)
 
 `bin/v3.sh` (committed, executable) launches the **refreshed glibc image** (Phases 0–2),
-parallel to `v2` during the transition. Alias it: `alias v3="$HOME/code/az/docker-neovim/bin/v3.sh"`
-(or symlink into your PATH).
+**modular bash** — a thin orchestrator that sources one module per heuristic from
+`bin/lib/`: `venv.sh` (venv automount), `hosttools.sh` (per-tool host-global
+bind-mounts), `secrets.sh` (Doppler, once), `copilot.sh` (config :ro),
+`gitident.sh` (commit identity), `term.sh` (TERM/COLORTERM). Each appends to the
+`OPTS` docker-run array; add a heuristic by dropping a `lib/*.sh` + one call in
+`v3.sh`. Zero runtime dependency (the launcher must start the editor on any host).
+It runs parallel to `v2` during the transition. Alias it:
+`alias v3="$HOME/code/az/docker-neovim/bin/v3.sh"` (or symlink into your PATH).
 
 **Contract (differs from v2):**
 - **glibc image** (`fwrlines/nvim3`) — host-built project tools (biome/ruff/venvs/sem-lsp) run natively (no gcompat).

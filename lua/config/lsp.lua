@@ -34,22 +34,36 @@ vim.diagnostic.config({
   jump = { float = true },
 })
 
+-- Put the project venv's bin on PATH BEFORE the executable() guards below, so a
+-- venv-provided ruff is found. (autocmds.lua also does this, but it loads AFTER
+-- config.lsp in init.lua — the guards would miss it. Doing it here makes the
+-- ordering self-contained.) Idempotent if autocmds repeats it.
+local venv = os.getenv("VIRTUAL_ENV")
+if venv and not (":" .. vim.env.PATH .. ":"):find(":" .. venv .. "/bin:", 1, true) then
+  vim.env.PATH = venv .. "/bin:" .. vim.env.PATH
+end
+
 -- Activate servers. Tool SOURCE model (glibc image — host glibc binaries run):
---   BAKED in image (always available): lua_ls, rust_analyzer (tarballs);
---     basedpyright, ts_ls, bashls, yamlls, jsonls, html (npm).
---   MOUNTED from the project working env (executable-guarded below):
---     ruff (project venv), sem_lsp (host-built bind-mount), project-local LSPs.
---     These are glibc and run natively in the glibc image.
+--   BAKED in image (always available): lua_ls (tarball), basedpyright, ts_ls,
+--     bashls, yamlls, jsonls, html, cssls (npm).
+--   GUARDED (enable only when the binary resolves on PATH):
+--     rust_analyzer (baked, but its lspconfig root_dir shells out to rustc,
+--       which is NOT baked — guard so a bare .rs file doesn't error),
+--     ruff (project venv), sem_lsp (host-built bind-mount).
 vim.lsp.enable({
-  "lua_ls", "rust_analyzer", -- tarball (system)
+  "lua_ls", -- tarball
   "bashls", "cssls", "jsonls", "html", "ts_ls", "yamlls", -- npm
   "basedpyright", -- python types (always-on, baked)
 })
 
--- Project-env tools: enable only when the binary resolves on PATH (the mounted
--- venv / bind-mount supplies it). No binary -> not enabled -> no spawn error.
--- ruff = project-pinned lint/format from the venv; not baked, so a venv-less
--- project just gets no ruff (basedpyright still provides types).
+-- Guarded servers: no binary -> not enabled -> no spawn error.
+-- rust_analyzer's lspconfig config calls `rustc --print sysroot`; rustc isn't in
+-- the image, so guard on it (not just rust-analyzer) to avoid the bare-.rs error.
+if vim.fn.executable("rust-analyzer") == 1 and vim.fn.executable("rustc") == 1 then
+  vim.lsp.enable("rust_analyzer")
+end
+-- ruff = project-pinned lint/format from the venv; not baked. venv-less project
+-- just gets no ruff (basedpyright still provides types).
 if vim.fn.executable("ruff") == 1 then
   vim.lsp.enable("ruff")
 end
