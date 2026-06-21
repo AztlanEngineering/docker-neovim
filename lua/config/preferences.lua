@@ -17,8 +17,12 @@ map("n", "k", "<C-w>k", { desc = "Window up" })
 map("n", "l", "<C-w>l", { desc = "Window right" })
 
 -- Pickers on the keys Adrian actually reaches for.
-map("n", "=", function() Snacks.picker.files() end, { desc = "Find files" })
-map("n", ";", function() Snacks.picker.buffers({ sort_lastused = true }) end, { desc = "Buffers" })
+map("n", "=", function()
+  Snacks.picker.files()
+end, { desc = "Find files" })
+map("n", ";", function()
+  Snacks.picker.buffers({ sort_lastused = true })
+end, { desc = "Buffers" })
 
 -- <leader>e stays :e! (reload, discarding changes). Kept deliberately despite
 -- sitting next to the save key — base already binds it; restated here so the

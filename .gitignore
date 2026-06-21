@@ -1,0 +1,11 @@
+# Build/runtime artifacts — never commit
+*.log
+logfile
+build.log
+
+# Editor/OS cruft
+.DS_Store
+*.swp
+
+# IMPORTANT: nvim-pack-lock.json is TRACKED ON PURPOSE — it is the plugin pin set
+# the image rebuilds from. Do NOT add it here.

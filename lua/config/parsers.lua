@@ -35,7 +35,6 @@ return {
   "python",
   "query",
   "regex",
-  "rust",
   "scss",
   "sparql",
   "toml",

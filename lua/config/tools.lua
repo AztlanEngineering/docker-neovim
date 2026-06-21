@@ -94,7 +94,7 @@ function M.status(bufnr)
   end
 
   add("")
-  add("## Format-on-save: " .. (vim.g._format_on_save_state ~= false and "ON" or "OFF"))
+  add("## Format-on-save: " .. (vim.g.format_on_save_enabled ~= false and "ON" or "OFF"))
 
   vim.api.nvim_echo({ { table.concat(lines, "\n") } }, false, {})
 end

@@ -25,7 +25,7 @@ LABEL maintainer="fwrlines <hello@fwrlines.com>"
 ENV DEBIAN_FRONTEND=noninteractive
 
 # ---- apt: ONLY basics + the native CLI formatters apt ships well ----
-# Everything version-load-bearing (nvim/node/stylua/lua_ls/rust_analyzer) comes
+# Everything version-load-bearing (nvim/node/stylua/lua_ls) comes
 # from pinned tarballs below, NOT apt. apt floats only within the digest-pinned
 # 26.04 release pocket. NO gcompat (glibc base). NO ruff (project venv). NO
 # neovim from apt (it's 0.11.6, too old for nvim-treesitter main).
@@ -82,14 +82,9 @@ RUN mkdir -p /opt/lua-language-server \
  && ln -s /opt/lua-language-server/bin/lua-language-server /usr/local/bin/lua-language-server \
  && rm /tmp/luals.tar.gz
 
-# rust-analyzer (tag 2026-06-15) — single gzipped glibc binary.
-ARG RA_URL=https://github.com/rust-lang/rust-analyzer/releases/download/2026-06-15/rust-analyzer-x86_64-unknown-linux-gnu.gz
-ARG RA_SHA256=a295578310361680eda4116b90b113126253278b9806b176faa46af3c451905d
-RUN curl -fsSL "$RA_URL" -o /tmp/ra.gz \
- && echo "${RA_SHA256}  /tmp/ra.gz" | sha256sum -c - \
- && gunzip -c /tmp/ra.gz > /usr/local/bin/rust-analyzer \
- && chmod +x /usr/local/bin/rust-analyzer \
- && rm /tmp/ra.gz
+# rust-analyzer: NOT baked. It's a project-versioned tool -> host-tool (TOOL POLICY,
+# PLAN-DECISIONS #12): v3 bind-mounts it from the host ~/.cargo/bin when present.
+# Baking it caused silent drift + it was dead anyway (needs rustc, never baked).
 
 # ---- pinned npm LSP servers (global; NPM_CONFIG_PREFIX puts bins on PATH) ----
 ENV NPM_CONFIG_PREFIX=/usr/local
@@ -99,7 +94,7 @@ RUN npm i -g --no-fund --no-audit \
       bash-language-server@5.6.0 \
       vscode-langservers-extracted@4.10.0 \
       yaml-language-server@1.23.0 \
-      basedpyright@latest \
+      basedpyright@1.39.8 \
  && npm cache clean --force
 # typescript@6.0.3 is REQUIRED by ts_ls (tsls has NO runtime deps; ships no tsc).
 # vscode-langservers-extracted ALSO provides jsonls + html FREE (bin list).
@@ -141,13 +136,14 @@ WORKDIR /home/myuser
 RUN mkdir -p /home/myuser/.config/nvim/lua/config
 
 # --- COPY ORDER (cache geometry): rarely-changed + resolution-affecting first ---
-COPY --chown=1000:1000 init.lua stylua.toml lazy-lock.json /home/myuser/.config/nvim/
-COPY --chown=1000:1000 lua/config/lazy.lua /home/myuser/.config/nvim/lua/config/lazy.lua
+COPY --chown=1000:1000 init.lua stylua.toml nvim-pack-lock.json /home/myuser/.config/nvim/
+# plugins.lua IS the spec (the plugin list) AND a config file: resolution-affecting,
+# so it is real + early. Editing it busts the install layer (intended).
+COPY --chown=1000:1000 lua/config/plugins.lua /home/myuser/.config/nvim/lua/config/plugins.lua
 # ai.lua is read at SPEC-PARSE time (gates which specs exist) — real, not a stub.
 COPY --chown=1000:1000 lua/config/ai.lua /home/myuser/.config/nvim/lua/config/ai.lua
 # parsers.lua is read by the bake script AND treesitter.lua — real, before baking.
 COPY --chown=1000:1000 lua/config/parsers.lua /home/myuser/.config/nvim/lua/config/parsers.lua
-COPY --chown=1000:1000 lua/plugins /home/myuser/.config/nvim/lua/plugins
 
 # Stub behavior-only config files so editing a keymap never busts install/bake.
 # lsp.lua is stubbed too: init.lua requires config.lsp at startup (the build
@@ -160,17 +156,30 @@ RUN touch /home/myuser/.config/nvim/lua/config/options.lua \
           /home/myuser/.config/nvim/lua/config/lsp.lua \
           /home/myuser/.config/nvim/lua/config/tools.lua
 
-# ---- PLUGIN LAYER ----
-# install (clones missing + runs build hooks) THEN restore (pins to lazy-lock.json).
-RUN nvim --headless "+Lazy! install" +qall \
- && nvim --headless "+Lazy! restore" +qall
+# ---- PLUGIN LAYER (vim.pack) ----
+# Sourcing config.plugins runs vim.pack.add(specs,{confirm=false}) which BLOCKS
+# (clones all in parallel, waits) and HONORS the committed nvim-pack-lock.json
+# (locked revision wins over `version`). confirm=false prevents the headless y/n
+# hang. The trailing update(target='lockfile',force) re-checks-out every plugin to
+# the lock — defensive against the commit-pin checkout bug (#36037); a wrong
+# treesitter rev is then caught by the final-stage assertion.
+RUN nvim --headless \
+      -c 'lua require("config.plugins")' \
+      -c 'lua vim.pack.update(nil, { force = true, target = "lockfile" })' \
+      -c 'qa'
 
 # ---- PARSER BAKE (the one native build) ----
 # Synchronous, serial, asserted (build/install-parsers.lua). Uses the glibc gcc
 # (build-essential) + the pinned tree-sitter-cli. Lands in
 # ~/.local/share/nvim/site/parser/*.so. Hard-fails the build on a missing parser.
 COPY --chown=1000:1000 build/install-parsers.lua /tmp/install-parsers.lua
-RUN nvim --headless "+luafile /tmp/install-parsers.lua" && rm /tmp/install-parsers.lua
+# vim.pack installs to site/pack/core/opt/* (opt = not on rtp until add()). Source
+# config.plugins first so nvim-treesitter is packadd'd + on rtp, THEN run the
+# synchronous parser bake (its own :wait() still essential — install() is async).
+RUN nvim --headless \
+      -c 'lua require("config.plugins")' \
+      -c 'luafile /tmp/install-parsers.lua' \
+ && rm /tmp/install-parsers.lua
 
 ########################################################################
 # final: runtime-root + built artifacts. No compiler. This is the shipped image.
@@ -183,8 +192,9 @@ LABEL org.opencontainers.image.source="https://github.com/AztlanEngineering/dock
 USER 1000:1000
 WORKDIR /home/myuser
 
-# ONE data copy covers lazy plugins (incl. the nvim-treesitter query corpus) and
-# site/parser/*.so — all under data/. (No mason/ dir — Mason is removed in Phase 2.)
+# ONE data copy covers vim.pack plugins (site/pack/core/opt/*, incl. the
+# nvim-treesitter query corpus) and site/parser/*.so — all under data/.
+# (No mason/ dir — Mason removed; no lazy/ dir — lazy.nvim replaced by vim.pack.)
 COPY --from=builder --chown=1000:1000 \
      /home/myuser/.local/share/nvim /home/myuser/.local/share/nvim
 COPY --from=builder --chown=1000:1000 \
@@ -194,7 +204,7 @@ COPY --from=builder --chown=1000:1000 \
 RUN set -e; \
     for t in nvim git rg fd node npm \
              stylua shellcheck shfmt \
-             lua-language-server rust-analyzer \
+             lua-language-server \
              typescript-language-server tsserver \
              bash-language-server yaml-language-server \
              vscode-json-language-server vscode-css-language-server vscode-html-language-server \
@@ -204,10 +214,18 @@ RUN set -e; \
     nvim --version | head -1 | grep -Eq 'v0\.12\.' || { echo 'ASSERT FAIL: nvim not 0.12.x'; exit 1; }; \
     ! command -v gcompat >/dev/null || { echo 'ASSERT FAIL: gcompat present (delete on glibc)'; exit 1; }; \
     ! command -v ruff >/dev/null    || { echo 'ASSERT FAIL: ruff baked (must be project venv)'; exit 1; }; \
+    ! command -v rust-analyzer >/dev/null || { echo 'ASSERT FAIL: rust-analyzer baked (now a host-tool)'; exit 1; }; \
     ! command -v gcc >/dev/null         || { echo 'ASSERT FAIL: gcc shipped in final'; exit 1; }; \
     ! command -v tree-sitter >/dev/null || { echo 'ASSERT FAIL: tree-sitter shipped in final'; exit 1; }
 RUN nvim --headless \
       -c 'lua assert(#vim.api.nvim_get_runtime_file("parser/lua.so", false) > 0, "parsers not baked")' \
+      -c 'qa'
+# vim.pack assertions: plugins present, treesitter pinned to the exact archived rev
+# (catches the commit-pin checkout bug — wrong rev = red build), :Trouble registered.
+RUN nvim --headless \
+      -c 'lua local n=0; local ts; for _,p in ipairs(vim.pack.get()) do n=n+1; if p.spec.name=="nvim-treesitter" then ts=p.rev end end; assert(n>=13, "too few plugins: "..n); assert(ts=="4916d6592ede8c07973490d9322f187e07dfefac", "treesitter rev wrong: "..tostring(ts))' \
+      -c 'lua assert(vim.fn.exists(":Trouble")==2, ":Trouble not registered (load=true?)")' \
+      -c 'lua assert(vim.g.colors_name=="iceberg", "colorscheme not iceberg")' \
       -c 'qa'
 
 WORKDIR /x/

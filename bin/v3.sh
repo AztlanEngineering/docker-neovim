@@ -41,7 +41,10 @@ DOCKER_IMAGE="${NVIM_IMAGE:-fwrlines/nvim3:local}"
 DOCKER="${V3_DOCKER:-docker}"
 
 # --- host-tool list: default set + V3_HOST_TOOLS env + --host-tool flags ---
-V3_HOST_TOOL_LIST=(sem-lsp)
+# Project-versioned lang tools come from the host (TOOL POLICY, PLAN-DECISIONS #12):
+# sem-lsp (RDF) + rust-analyzer (mounted from host ~/.cargo/bin when present).
+# Absent tools simply don't mount (graceful).
+V3_HOST_TOOL_LIST=(sem-lsp rust-analyzer)
 if [ -n "${V3_HOST_TOOLS:-}" ]; then
   # shellcheck disable=SC2206
   V3_HOST_TOOL_LIST+=(${V3_HOST_TOOLS})

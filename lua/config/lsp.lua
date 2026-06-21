@@ -1,5 +1,5 @@
 -- Native LSP activation (Neovim 0.12 lsp/ idiom). Required from init.lua AFTER
--- config.lazy, so nvim-lspconfig's lsp/ data is on the runtimepath first.
+-- config.plugins, so nvim-lspconfig's lsp/ data is on the runtimepath first.
 --
 -- Servers with NO file in lsp/ or after/lsp/ are configured entirely by
 -- nvim-lspconfig's shipped lsp/<name>.lua data. Overrides live in after/lsp/
@@ -47,18 +47,23 @@ end
 --   BAKED in image (always available): lua_ls (tarball), basedpyright, ts_ls,
 --     bashls, yamlls, jsonls, html, cssls (npm).
 --   GUARDED (enable only when the binary resolves on PATH):
---     rust_analyzer (baked, but its lspconfig root_dir shells out to rustc,
---       which is NOT baked — guard so a bare .rs file doesn't error),
+--     rust_analyzer (host-tool: v3 mounts it from the host when present; also
+--       needs rustc for its root_dir, so guard on both -> bare .rs never errors),
 --     ruff (project venv), sem_lsp (host-built bind-mount).
 vim.lsp.enable({
   "lua_ls", -- tarball
-  "bashls", "cssls", "jsonls", "html", "ts_ls", "yamlls", -- npm
+  "bashls",
+  "cssls",
+  "jsonls",
+  "html",
+  "ts_ls",
+  "yamlls", -- npm
   "basedpyright", -- python types (always-on, baked)
 })
 
 -- Guarded servers: no binary -> not enabled -> no spawn error.
--- rust_analyzer's lspconfig config calls `rustc --print sysroot`; rustc isn't in
--- the image, so guard on it (not just rust-analyzer) to avoid the bare-.rs error.
+-- rust_analyzer is a host-tool (not baked); its lspconfig config also calls
+-- `rustc --print sysroot`, so require both before enabling.
 if vim.fn.executable("rust-analyzer") == 1 and vim.fn.executable("rustc") == 1 then
   vim.lsp.enable("rust_analyzer")
 end
@@ -85,10 +90,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
     map("gd", vim.lsp.buf.definition, "Go to definition")
     map("gD", vim.lsp.buf.declaration, "Go to declaration")
     map("<leader>lh", function()
-      vim.lsp.inlay_hint.enable(
-        not vim.lsp.inlay_hint.is_enabled({ bufnr = args.buf }),
-        { bufnr = args.buf }
-      )
+      vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = args.buf }), { bufnr = args.buf })
     end, "Toggle inlay hints")
 
     -- Paired-tag/identifier rename for html + ts (0.12). Filter takes client_id only.
