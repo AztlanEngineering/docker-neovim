@@ -217,16 +217,26 @@ RUN set -e; \
     ! command -v rust-analyzer >/dev/null || { echo 'ASSERT FAIL: rust-analyzer baked (now a host-tool)'; exit 1; }; \
     ! command -v gcc >/dev/null         || { echo 'ASSERT FAIL: gcc shipped in final'; exit 1; }; \
     ! command -v tree-sitter >/dev/null || { echo 'ASSERT FAIL: tree-sitter shipped in final'; exit 1; }
-RUN nvim --headless \
-      -c 'lua assert(#vim.api.nvim_get_runtime_file("parser/lua.so", false) > 0, "parsers not baked")' \
-      -c 'qa'
+RUN nvim --headless -c 'lua \
+      local ok = #vim.api.nvim_get_runtime_file("parser/lua.so", false) > 0; \
+      if not ok then io.stderr:write("ASSERT FAIL: parsers not baked\n"); vim.cmd("cquit 1") end; \
+      vim.cmd("qa")'
 # vim.pack assertions: plugins present, treesitter pinned to the exact archived rev
-# (catches the commit-pin checkout bug — wrong rev = red build), :Trouble registered.
-RUN nvim --headless \
-      -c 'lua local n=0; local ts; for _,p in ipairs(vim.pack.get()) do n=n+1; if p.spec.name=="nvim-treesitter" then ts=p.rev end end; assert(n>=13, "too few plugins: "..n); assert(ts=="4916d6592ede8c07973490d9322f187e07dfefac", "treesitter rev wrong: "..tostring(ts))' \
-      -c 'lua assert(vim.fn.exists(":Trouble")==2, ":Trouble not registered (load=true?)")' \
-      -c 'lua assert(vim.g.colors_name=="iceberg", "colorscheme not iceberg")' \
-      -c 'qa'
+# (catches the commit-pin checkout bug), :Trouble registered, iceberg active.
+# MUST gate the build: a bare `assert` in -c errors but nvim continues to +qa and
+# exits 0 (the assertion would be a no-op). Wrap in pcall + cquit 1 so a failure
+# turns the build RED (same idiom as build/install-parsers.lua).
+RUN nvim --headless -c 'lua \
+      local ok, err = pcall(function() \
+        local n, ts = 0, nil; \
+        for _, p in ipairs(vim.pack.get()) do n = n + 1; if p.spec.name == "nvim-treesitter" then ts = p.rev end end; \
+        assert(n >= 13, "too few plugins: " .. n); \
+        assert(ts == "4916d6592ede8c07973490d9322f187e07dfefac", "treesitter rev wrong: " .. tostring(ts)); \
+        assert(vim.fn.exists(":Trouble") == 2, ":Trouble not registered (load=true?)"); \
+        assert(vim.g.colors_name == "iceberg", "colorscheme not iceberg"); \
+      end); \
+      if not ok then io.stderr:write("ASSERT FAIL: " .. tostring(err) .. "\n"); vim.cmd("cquit 1") end; \
+      vim.cmd("qa")'
 
 WORKDIR /x/
 ENTRYPOINT ["nvim"]

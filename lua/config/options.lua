@@ -1,5 +1,5 @@
 -- Options: static editor settings
--- Loaded before lazy.nvim in init.lua
+-- Loaded before config.plugins in init.lua
 
 vim.o.termguicolors = true
 

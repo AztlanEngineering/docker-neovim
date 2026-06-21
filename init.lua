@@ -1,4 +1,4 @@
--- bootstrap lazy.nvim, LazyVim and your plugins
+-- bootstrap: vim.pack plugins + config modules
 vim.g.mapleader = ","
 
 require("config.options")
