@@ -1,101 +1,171 @@
 # syntax=docker/dockerfile:1.7
 ########################################################################
 # fwrlines/nvim-base — heavy, rarely rebuilt, digest-pinned fleet artifact.
+# GLIBC base (Ubuntu 26.04 LTS). Re-based from Alpine/musl so project tools
+# (biome/ruff/venvs/sem-lsp/design-tokens LSP) mount-from-env and RUN natively
+# — host binaries are glibc, so the container must be glibc too.
 #
-# Rebuild ONLY for: alpine/nvim bump, a plugin-set change with a NATIVE build
+# Rebuild ONLY for: ubuntu/nvim bump, a plugin-set change with a NATIVE build
 # (today only tree-sitter parsers), a parser-list change (lua/config/parsers.lua),
-# a Mason package-set change, an ai.lua toggle flip, or an npm tool bump.
-# Every config-behavior edit (keymaps/options/autocmds/preferences) lives in the
-# thin Dockerfile and does NOT rebuild this image.
+# an npm tool-set bump, or a baked-tarball version bump. Every config-behavior
+# edit (keymaps/options/autocmds/preferences) lives in the thin Dockerfile and
+# does NOT rebuild this image.
 #
-# Diamond multi-stage: runtime-root -> builder (owns gcc + tree-sitter-cli)
+# Diamond multi-stage: runtime-root -> builder (owns build-essential + tree-sitter-cli)
 #                                   -> final  (runtime-root + COPY --from=builder)
 # No compiler ever ships in `final`.
 ########################################################################
 
-# Pin tag (human intent) AND digest (machine truth; tags are mutable). 3.24 ==
-# nvim 0.12.2, required by nvim-treesitter `main` (hard-errors below 0.12).
-# Index (multi-arch) digest captured via `docker buildx imagetools inspect`.
-ARG ALPINE_DIGEST=sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
-FROM alpine:3.24@${ALPINE_DIGEST} AS runtime-root
+# Pin tag (human intent) AND digest (machine truth; tags mutable).
+# 26.04 == glibc base validated for nvim 0.12.3 + glibc project-tool mounts.
+ARG UBUNTU_DIGEST=sha256:53958ec7b67c2c9355df922dd08dbf0360611f8c3cdb656875e81873db9ffdba
+FROM ubuntu:26.04@${UBUNTU_DIGEST} AS runtime-root
 
 LABEL maintainer="fwrlines <hello@fwrlines.com>"
+ENV DEBIAN_FRONTEND=noninteractive
 
-# ---- runtime apk set: ONLY what the editor needs at RUN time ----
-# Dropped vs the old single-stage file: build-base/gcc/musl-dev/tree-sitter-cli
-# (-> builder only), rust/cargo (avante gone), lua5.1/lua5.1-dev/luarocks (rocks
-# disabled), py3-pynvim (no python remote plugin), uv (no consumer).
-RUN apk add --no-cache \
-      neovim neovim-doc \
+# ---- apt: ONLY basics + the native CLI formatters apt ships well ----
+# Everything version-load-bearing (nvim/node/stylua/lua_ls/rust_analyzer) comes
+# from pinned tarballs below, NOT apt. apt floats only within the digest-pinned
+# 26.04 release pocket. NO gcompat (glibc base). NO ruff (project venv). NO
+# neovim from apt (it's 0.11.6, too old for nvim-treesitter main).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates \
       git curl bash \
-      ripgrep fd fzf \
+      ripgrep fd-find fzf \
       python3 \
-      nodejs npm \
-      lua-language-server rust-analyzer \
-      gcompat
-# gcompat: glibc shim ONLY for the host-mounted sem-lsp (lua/plugins/sem-lsp.lua).
-# Delete in Phase 2 the day sem-lsp ships musl, so glibc binaries fail fast.
+      xz-utils unzip \
+      shellcheck shfmt \
+ && rm -rf /var/lib/apt/lists/*
+# Debian/Ubuntu name fd as `fdfind`; snacks.picker + the agent call `fd`.
+RUN ln -s "$(command -v fdfind)" /usr/local/bin/fd
 
-RUN adduser -D -u 1000 myuser
+# ---- BAKED TOOLCHAIN: pinned upstream release tarballs (URL + sha256) ----
+# Each download is sha256-verified; a mismatch FAILS THE BUILD.
+
+# neovim 0.12.3 — apt is 0.11.6 (too old for nvim-treesitter main, needs 0.12).
+ARG NVIM_URL=https://github.com/neovim/neovim/releases/download/v0.12.3/nvim-linux-x86_64.tar.gz
+ARG NVIM_SHA256=c441b547142860bf01bcce39e36cbed185c41112813e15443b16e5237750724d
+RUN curl -fsSL "$NVIM_URL" -o /tmp/nvim.tar.gz \
+ && echo "${NVIM_SHA256}  /tmp/nvim.tar.gz" | sha256sum -c - \
+ && tar -xzf /tmp/nvim.tar.gz -C /opt \
+ && ln -s /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim \
+ && rm /tmp/nvim.tar.gz
+
+# node 24.17.0 LTS — official tarball (copilot.lua needs Node>=22; satisfied).
+ARG NODE_URL=https://nodejs.org/dist/v24.17.0/node-v24.17.0-linux-x64.tar.xz
+ARG NODE_SHA256=ab343a1b747c7cbf3630dfd7dbf818c5423fab2eb4f5ad1afc896f6bd121a917
+RUN curl -fsSL "$NODE_URL" -o /tmp/node.tar.xz \
+ && echo "${NODE_SHA256}  /tmp/node.tar.xz" | sha256sum -c - \
+ && tar -xJf /tmp/node.tar.xz -C /opt \
+ && ln -s /opt/node-v24.17.0-linux-x64/bin/node /usr/local/bin/node \
+ && ln -s /opt/node-v24.17.0-linux-x64/bin/npm  /usr/local/bin/npm \
+ && ln -s /opt/node-v24.17.0-linux-x64/bin/npx  /usr/local/bin/npx \
+ && rm /tmp/node.tar.xz
+
+# stylua 2.5.2 — GitHub release glibc zip (NOT the -musl asset).
+ARG STYLUA_URL=https://github.com/JohnnyMorganz/StyLua/releases/download/v2.5.2/stylua-linux-x86_64.zip
+ARG STYLUA_SHA256=bcb0d855e91f102f28a370e850f8566b3b44b79e6274d806ea5246837c0fd5ab
+RUN curl -fsSL "$STYLUA_URL" -o /tmp/stylua.zip \
+ && echo "${STYLUA_SHA256}  /tmp/stylua.zip" | sha256sum -c - \
+ && unzip -o /tmp/stylua.zip -d /usr/local/bin \
+ && chmod +x /usr/local/bin/stylua \
+ && rm /tmp/stylua.zip
+
+# lua-language-server 3.18.2 — GitHub release linux-x64 tarball (glibc).
+ARG LUALS_URL=https://github.com/LuaLS/lua-language-server/releases/download/3.18.2/lua-language-server-3.18.2-linux-x64.tar.gz
+ARG LUALS_SHA256=ca71415dd19f19e30aaa35a4915aefca9fdb5fec31b98331cc3d77f778d539c5
+RUN mkdir -p /opt/lua-language-server \
+ && curl -fsSL "$LUALS_URL" -o /tmp/luals.tar.gz \
+ && echo "${LUALS_SHA256}  /tmp/luals.tar.gz" | sha256sum -c - \
+ && tar -xzf /tmp/luals.tar.gz -C /opt/lua-language-server \
+ && ln -s /opt/lua-language-server/bin/lua-language-server /usr/local/bin/lua-language-server \
+ && rm /tmp/luals.tar.gz
+
+# rust-analyzer (tag 2026-06-15) — single gzipped glibc binary.
+ARG RA_URL=https://github.com/rust-lang/rust-analyzer/releases/download/2026-06-15/rust-analyzer-x86_64-unknown-linux-gnu.gz
+ARG RA_SHA256=a295578310361680eda4116b90b113126253278b9806b176faa46af3c451905d
+RUN curl -fsSL "$RA_URL" -o /tmp/ra.gz \
+ && echo "${RA_SHA256}  /tmp/ra.gz" | sha256sum -c - \
+ && gunzip -c /tmp/ra.gz > /usr/local/bin/rust-analyzer \
+ && chmod +x /usr/local/bin/rust-analyzer \
+ && rm /tmp/ra.gz
+
+# ---- pinned npm LSP servers (global; NPM_CONFIG_PREFIX puts bins on PATH) ----
+ENV NPM_CONFIG_PREFIX=/usr/local
+RUN npm i -g --no-fund --no-audit \
+      typescript-language-server@5.3.0 \
+      typescript@6.0.3 \
+      bash-language-server@5.6.0 \
+      vscode-langservers-extracted@4.10.0 \
+      yaml-language-server@1.23.0 \
+      basedpyright@latest \
+ && npm cache clean --force
+# typescript@6.0.3 is REQUIRED by ts_ls (tsls has NO runtime deps; ships no tsc).
+# vscode-langservers-extracted ALSO provides jsonls + html FREE (bin list).
+# basedpyright = always-on Python types/hover/goto (ruff lint/format = project venv).
+# NO ruff here (project venv only). NO gcompat (glibc).
+
+# ---- user (uid 1000 == host; /x mount ownership depends on it) ----
+# Ubuntu 26.04 ships a default `ubuntu` user at uid 1000 (24.04+). Reuse the uid,
+# rename to myuser, move HOME. (Alt if the default user is ever dropped:
+#   RUN userdel -r ubuntu 2>/dev/null || true; useradd -m -u 1000 myuser )
+RUN usermod -l myuser -d /home/myuser -m ubuntu \
+ && groupmod -n myuser ubuntu
 ENV HOME=/home/myuser
-# Project-local node bins APPENDED (not prepended): a mounted repo at /x must not
-# shadow git/node/rg for the agent session.
-ENV PATH="$PATH:./node_modules/.bin"
+# tarball+npm bins first; project-local node bins APPENDED (a mounted repo at /x
+# must not shadow git/node/rg for the agent session).
+ENV PATH="/usr/local/bin:$PATH:./node_modules/.bin"
 
 ########################################################################
 # builder: the ONLY stage that owns a compiler. Its debris never ships.
 ########################################################################
 FROM runtime-root AS builder
 
-# The parser-compiler set. tree-sitter-cli is the APK build (musl); the npm one
-# ships a glibc binary. build-base = gcc + make + musl-dev.
-RUN apk add --no-cache build-base tree-sitter-cli
+# The parser-compiler set. build-essential = gcc/g++/make/libc-dev (glibc).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential \
+ && rm -rf /var/lib/apt/lists/*
+
+# tree-sitter-cli 0.26.9 from the GitHub release zip (pinned), NOT npm/apt.
+ARG TSCLI_URL=https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.9/tree-sitter-cli-linux-x64.zip
+ARG TSCLI_SHA256=0ea5daaef79145fe73786f0e3cdc43b62b22ddb36f7f6676c9f8bb72434d78e9
+RUN curl -fsSL "$TSCLI_URL" -o /tmp/ts.zip \
+ && echo "${TSCLI_SHA256}  /tmp/ts.zip" | sha256sum -c - \
+ && unzip -o /tmp/ts.zip -d /usr/local/bin \
+ && chmod +x /usr/local/bin/tree-sitter \
+ && rm /tmp/ts.zip
 
 USER 1000:1000
 WORKDIR /home/myuser
 RUN mkdir -p /home/myuser/.config/nvim/lua/config
 
 # --- COPY ORDER (cache geometry): rarely-changed + resolution-affecting first ---
-# init.lua + stylua.toml + committed lockfile: rarely change.
 COPY --chown=1000:1000 init.lua stylua.toml lazy-lock.json /home/myuser/.config/nvim/
-# lazy bootstrap: rarely changes.
 COPY --chown=1000:1000 lua/config/lazy.lua /home/myuser/.config/nvim/lua/config/lazy.lua
-# ai.lua: read at SPEC-PARSE time by completion.lua/copilot.lua (it gates which
-# specs exist), so it must be REAL content before any Lazy command. Rarely changes.
+# ai.lua is read at SPEC-PARSE time (gates which specs exist) — real, not a stub.
 COPY --chown=1000:1000 lua/config/ai.lua /home/myuser/.config/nvim/lua/config/ai.lua
-# parsers.lua: read by the bake script AND by treesitter.lua. Real, before baking.
+# parsers.lua is read by the bake script AND treesitter.lua — real, before baking.
 COPY --chown=1000:1000 lua/config/parsers.lua /home/myuser/.config/nvim/lua/config/parsers.lua
-# plugin specs: the heavy trigger. Must sit above the install layer.
 COPY --chown=1000:1000 lua/plugins /home/myuser/.config/nvim/lua/plugins
 
-# Stub the config files init.lua require()s but that do NOT affect plugin
-# resolution, so editing a keymap never busts the install/bake layers. The thin
-# image supplies their real content.
+# Stub behavior-only config files so editing a keymap never busts install/bake.
 RUN touch /home/myuser/.config/nvim/lua/config/options.lua \
           /home/myuser/.config/nvim/lua/config/autocmds.lua \
           /home/myuser/.config/nvim/lua/config/keymaps.lua \
           /home/myuser/.config/nvim/lua/config/preferences.lua
 
 # ---- PLUGIN LAYER ----
-# install (install.missing=true clones absent plugins AND runs build hooks) THEN
-# restore (checks every plugin out to the committed lazy-lock.json). Two steps:
-# `restore` alone is not documented to install-missing; `install` is. This pins
-# the closure to the lockfile regardless of restore's undocumented behavior.
+# install (clones missing + runs build hooks) THEN restore (pins to lazy-lock.json).
 RUN nvim --headless "+Lazy! install" +qall \
  && nvim --headless "+Lazy! restore" +qall
 
 # ---- PARSER BAKE (the one native build) ----
-# Synchronous, serial, asserted. Replaces the async "+TSUpdate +qall" no-op.
-# Hard-fails the build if any parser is missing.
+# Synchronous, serial, asserted (build/install-parsers.lua). Uses the glibc gcc
+# (build-essential) + the pinned tree-sitter-cli. Lands in
+# ~/.local/share/nvim/site/parser/*.so. Hard-fails the build on a missing parser.
 COPY --chown=1000:1000 build/install-parsers.lua /tmp/install-parsers.lua
 RUN nvim --headless "+luafile /tmp/install-parsers.lua" && rm /tmp/install-parsers.lua
-
-# ---- MASON BAKE (Mason STILL present in Phase 1; removed in Phase 2) ----
-# The two headless commands the config defines (mason.lua). The deprecation
-# traceback they print is benign (exit 0); Phase 2 removes Mason entirely.
-RUN nvim --headless "+MasonInstallAllLsps" +qall \
- && nvim --headless "+MasonInstallAllPackages" +qall \
- && { npm cache clean --force || true; }
 
 ########################################################################
 # final: runtime-root + built artifacts. No compiler. This is the shipped image.
@@ -108,22 +178,31 @@ LABEL org.opencontainers.image.source="https://github.com/AztlanEngineering/dock
 USER 1000:1000
 WORKDIR /home/myuser
 
-# ONE data copy covers lazy plugins (incl. the nvim-treesitter query corpus),
-# site/parser/*.so, and mason — all live under data/.
+# ONE data copy covers lazy plugins (incl. the nvim-treesitter query corpus) and
+# site/parser/*.so — all under data/. (No mason/ dir — Mason is removed in Phase 2.)
 COPY --from=builder --chown=1000:1000 \
      /home/myuser/.local/share/nvim /home/myuser/.local/share/nvim
-# The config snapshot install/restore/bake ran against (stubs included; the thin
-# image overwrites the real ones). Keeps base self-consistent and runnable alone.
 COPY --from=builder --chown=1000:1000 \
      /home/myuser/.config/nvim /home/myuser/.config/nvim
 
 # ---- BUILD-TIME ASSERTIONS: fail HERE, not three weeks later mid-edit. ----
-RUN for t in nvim git rg fd node npm lua-language-server rust-analyzer; do \
+RUN set -e; \
+    for t in nvim git rg fd node npm \
+             stylua shellcheck shfmt \
+             lua-language-server rust-analyzer \
+             typescript-language-server tsserver \
+             bash-language-server yaml-language-server \
+             vscode-json-language-server vscode-css-language-server vscode-html-language-server \
+             basedpyright; do \
       command -v "$t" >/dev/null || { printf 'ASSERT FAIL: tool not found: %s\n' "$t"; exit 1; }; \
-    done \
- && nvim --headless \
+    done; \
+    nvim --version | head -1 | grep -Eq 'v0\.12\.' || { echo 'ASSERT FAIL: nvim not 0.12.x'; exit 1; }; \
+    ! command -v gcompat >/dev/null || { echo 'ASSERT FAIL: gcompat present (delete on glibc)'; exit 1; }; \
+    ! command -v ruff >/dev/null    || { echo 'ASSERT FAIL: ruff baked (must be project venv)'; exit 1; }; \
+    ! command -v gcc >/dev/null         || { echo 'ASSERT FAIL: gcc shipped in final'; exit 1; }; \
+    ! command -v tree-sitter >/dev/null || { echo 'ASSERT FAIL: tree-sitter shipped in final'; exit 1; }
+RUN nvim --headless \
       -c 'lua assert(#vim.api.nvim_get_runtime_file("parser/lua.so", false) > 0, "parsers not baked")' \
-      -c 'lua assert(vim.uv.fs_stat(vim.fn.stdpath("data").."/mason/bin/typescript-language-server"), "mason ts_ls missing")' \
       -c 'qa'
 
 WORKDIR /x/
