@@ -143,3 +143,29 @@ It runs parallel to `v2` during the transition. Alias it:
 - `V3_DOCKER=podman` for rootless-podman hosts; `NVIM_IMAGE=...` overrides the image (TODO: read from `core/versions.env` after the GHCR push).
 
 **Tooling status in-editor:** `:ToolStatus` (or `<leader>li`) reports, for the current buffer, which LSPs/formatters are active vs absent and where each resolved from (project node_modules / venv / baked / host-mount / not found) — the on-demand `:ALEInfo` analogue. It is normal for project tools to be absent; status is pulled, not pushed.
+
+---
+
+## Clipboard (container nvim → host tmux → foot)
+
+The editor runs in the container; **tmux runs on the host**. Yank-to-system-clipboard
+travels: container nvim → docker pty → host tmux → foot → Wayland clipboard, over
+**OSC52**. The image side is wired (`lua/config/options.lua`):
+
+- `vim.g.clipboard` = OSC52 provider (copy); a `TextYankPost` autocmd mirrors only
+  real **yanks** (not deletes) to `+`, so `y` reaches the host clipboard without
+  `clipboard=unnamedplus` routing every `d`/`x` through the slow OSC52 channel.
+- **Paste:** tmux does **not** forward the OSC52 read-response into the container,
+  so `"+p` cannot pull the host clipboard *through tmux*. Use the terminal's paste
+  (**Ctrl+Shift+V**) for host→editor; `"+p` reads nvim's own register.
+
+**Host-side requirement (df `config/tmux/tmux.conf` — apply there):** tmux must be
+told to forward OSC52 to foot, or copy is silently swallowed:
+
+```tmux
+set -g set-clipboard on
+set -g allow-passthrough on
+```
+
+(Verified: the host terminfo advertises `Ms` (OSC52), but the current tmux.conf
+sets neither option — copy won't reach the clipboard until these are added.)

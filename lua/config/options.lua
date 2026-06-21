@@ -26,17 +26,29 @@ vim.o.cursorcolumn = true
 -- Editing
 vim.o.backspace = "indent,eol,start"
 
--- Clipboard: explicit OSC52 copy-only provider. The editor runs in a container
--- with no clipboard tool and no DISPLAY; OSC52 sends yanks to the host terminal
--- (foot) over the escape channel. Copy-only (paste reads the host via the
--- terminal's own paste); this avoids the unreliable provider auto-detection.
+-- Persistence across --rm (project-local at /x/.nvim, which rides the cwd mount;
+-- gitignore /x/.nvim in projects). Undo history + shada (marks, registers, search
+-- + recent files for snacks.picker.recent / <leader>fr) survive container exit.
+-- Falls back to the in-container state dir when /x isn't writable (no project).
+local state = (vim.fn.filewritable("/x") == 2) and "/x/.nvim" or (vim.fn.stdpath("state") .. "/persist")
+vim.fn.mkdir(state .. "/undo", "p")
+vim.o.undofile = true
+vim.o.undodir = state .. "/undo"
+vim.o.shadafile = state .. "/shada"
+
+-- Clipboard: OSC52 (the only channel that crosses container -> host tmux -> foot).
+--  * COPY works through tmux (needs `set-clipboard on` + `allow-passthrough on`
+--    in the host tmux.conf — see docs/LAUNCHER.md).
+--  * PASTE: tmux does NOT forward the OSC52 read-response into the container, so
+--    "+p can't pull the host clipboard through tmux. paste reads nvim's own
+--    register; use the terminal's paste (Ctrl+Shift+V) for host->editor.
+--  * SMART: a TextYankPost autocmd mirrors only real YANKS (not deletes) to "+",
+--    so `y` reaches the host clipboard WITHOUT clipboard=unnamedplus routing every
+--    d/x through the slow OSC52 channel.
 local osc52 = require("vim.ui.clipboard.osc52")
 vim.g.clipboard = {
   name = "osc52",
-  copy = {
-    ["+"] = osc52.copy("+"),
-    ["*"] = osc52.copy("*"),
-  },
+  copy = { ["+"] = osc52.copy("+"), ["*"] = osc52.copy("*") },
   paste = {
     ["+"] = function()
       return { vim.fn.getreg("", 1, 1), vim.fn.getregtype("") }
@@ -46,3 +58,11 @@ vim.g.clipboard = {
     end,
   },
 }
+vim.api.nvim_create_autocmd("TextYankPost", {
+  group = vim.api.nvim_create_augroup("user.clip", { clear = true }),
+  callback = function()
+    if vim.v.event.operator == "y" and vim.v.event.regname == "" then
+      vim.fn.setreg("+", vim.v.event.regcontents, vim.v.event.regtype)
+    end
+  end,
+})

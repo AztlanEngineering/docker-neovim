@@ -43,8 +43,24 @@ RUN nvim --headless \
       -c 'lua vim.pack.update(nil, { force = true, target = "lockfile" })' \
       -c 'qa'
 
+# stylua gate (drive-by): the full config must pass the repo's own stylua.toml.
+# Here (not in base) because lsp/ + after/ ship only in the thin image.
+RUN cd /home/myuser/.config/nvim \
+ && stylua --check init.lua lua lsp after \
+ || { echo 'ASSERT FAIL: stylua --check failed (lua drifted from stylua.toml)'; exit 1; }
+
 # Smoke: the full real config (options/keymaps/preferences) loads headless.
 RUN nvim --headless "+lua print('config ok')" +qall
+
+# LSP-ATTACH assertion (drive-by): prove lua_ls actually ATTACHES (not just that
+# the binary exists — would have caught the root-owned-metapath crash). Real
+# config lives here (the base ships stubs), so the enable + attach happen.
+RUN printf 'local x = 1\n' > /tmp/probe.lua \
+ && nvim --headless /tmp/probe.lua -c 'lua \
+      local ok = vim.wait(25000, function() return #vim.lsp.get_clients({ bufnr = 0, name = "lua_ls" }) > 0 end, 200); \
+      if not ok then io.stderr:write("ASSERT FAIL: lua_ls did not attach\n"); vim.cmd("cquit 1") end; \
+      vim.cmd("qa")' \
+ && rm /tmp/probe.lua
 
 # Restore the project workdir. A child WORKDIR in this stage (above) overrides
 # the base's, so it must be set again explicitly — it is NOT inherited once

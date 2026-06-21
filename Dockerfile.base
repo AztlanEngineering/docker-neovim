@@ -181,6 +181,16 @@ RUN nvim --headless \
       -c 'luafile /tmp/install-parsers.lua' \
  && rm /tmp/install-parsers.lua
 
+# (A baked lua_ls warm-meta cache was tried and reverted — lua_ls --check didn't
+#  reliably materialize meta at build time and an empty --metapath broke attach.
+#  The LSP-attach assertion in the final stage caught it. ~4.5s first-index per
+#  --rm is accepted; after/lsp/lua_ls.lua uses the ephemeral cache metapath.)
+
+# ---- strip .git from baked plugins (drive-by, -~190MB) ----
+# The image never updates plugins (vim.pack restores from the committed lockfile),
+# so each plugin's .git is dead weight. copilot.lua alone carries ~152MB of it.
+RUN find /home/myuser/.local/share/nvim/site/pack/core/opt -type d -name .git -exec rm -rf {} + 2>/dev/null; true
+
 ########################################################################
 # final: runtime-root + built artifacts. No compiler. This is the shipped image.
 ########################################################################
@@ -237,6 +247,13 @@ RUN nvim --headless -c 'lua \
       end); \
       if not ok then io.stderr:write("ASSERT FAIL: " .. tostring(err) .. "\n"); vim.cmd("cquit 1") end; \
       vim.cmd("qa")'
+
+# (stylua gate runs in the THIN Dockerfile, where the full config — incl. lsp/ and
+#  after/ — is present. The base only carries init.lua + lua/.)
+
+# (The LSP-attach assertion lives in the THIN Dockerfile: the base ships STUB
+#  config files — lsp.lua is empty here, so vim.lsp.enable never runs and lua_ls
+#  wouldn't attach in the base. The thin image has the real config.)
 
 WORKDIR /x/
 ENTRYPOINT ["nvim"]
