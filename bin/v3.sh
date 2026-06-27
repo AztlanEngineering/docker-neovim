@@ -36,7 +36,12 @@ _V3_DIR="$(dirname "$_V3_SELF")"
 # shellcheck source=lib/term.sh
 . "$_V3_DIR/lib/term.sh"
 
-# Image: local tag for now. TODO(GHCR): read from core/versions.env after push.
+# Image resolution, in precedence: explicit $NVIM_IMAGE env > versions.env (the
+# fleet pointer written by bin/push.sh; digest-pinned) > local build tag.
+if [ -z "${NVIM_IMAGE:-}" ] && [ -f "$_V3_DIR/../versions.env" ]; then
+  # shellcheck disable=SC1090
+  . "$_V3_DIR/../versions.env"
+fi
 DOCKER_IMAGE="${NVIM_IMAGE:-fwrlines/nvim3:local}"
 DOCKER="${V3_DOCKER:-docker}"
 

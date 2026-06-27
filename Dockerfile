@@ -14,7 +14,13 @@
 ARG BASE_IMAGE=nvim-base:local
 FROM ${BASE_IMAGE}
 ARG GIT_SHA=unknown
-LABEL org.opencontainers.image.revision="${GIT_SHA}"
+# Override the OCI labels inherited from the Ubuntu base so the GHCR package
+# page describes THIS editor, not Ubuntu. source= links the package to the repo.
+LABEL org.opencontainers.image.title="nvim3" \
+      org.opencontainers.image.description="fwrlines fleet editor — Neovim 0.12 (glibc), AI-light, project-tool-aware" \
+      org.opencontainers.image.source="https://github.com/AztlanEngineering/docker-neovim" \
+      org.opencontainers.image.revision="${GIT_SHA}" \
+      org.opencontainers.image.licenses="MIT"
 
 USER 1000:1000
 WORKDIR /home/myuser
