@@ -68,6 +68,18 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+# --- narrow-mount guard -----------------------------------------------------
+# mount = cwd (decision #8): anything ABOVE $(pwd) does not exist in the
+# container. Launching below a repo root amputates the project's toolchain AND
+# its configs (biome.json etc.) — formatters would be silently absent (or, with
+# host fallbacks, silently wrong). Warn, don't block: narrow launches are
+# legitimate when intended.
+_git_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [ -n "$_git_root" ] && [ "$_git_root" != "$(pwd -P)" ]; then
+  printf 'v3: WARN cwd is below the repo root (%s) — the toolchain above the mount is invisible; launch from the root for the full project env\n' "$_git_root" >&2
+fi
+unset _git_root
+
 # --- compose the docker-run flags via the modules ---
 if [ "$CHECK" -eq 1 ]; then
   # headless probe: no TTY/stdin, and no secrets — a toolchain report must not
