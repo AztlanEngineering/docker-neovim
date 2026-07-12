@@ -16,7 +16,7 @@
 # Usage: v3 [--host-tool NAME]... [nvim args...] [file...]
 #   --host-tool NAME      bind-mount an extra host-global binary (repeatable)
 #   V3_HOST_TOOLS="a b"   same, via env
-#   NVIM_IMAGE=...        override the image (default fwrlines/nvim3:local)
+#   NVIM_IMAGE=...        override the image (default nvim:local)
 #   V3_DOCKER=podman      use a different OCI runtime
 set -euo pipefail
 
@@ -42,7 +42,7 @@ if [ -z "${NVIM_IMAGE:-}" ] && [ -f "$_V3_DIR/../versions.env" ]; then
   # shellcheck disable=SC1090
   . "$_V3_DIR/../versions.env"
 fi
-DOCKER_IMAGE="${NVIM_IMAGE:-fwrlines/nvim3:local}"
+DOCKER_IMAGE="${NVIM_IMAGE:-nvim:local}"
 DOCKER="${V3_DOCKER:-docker}"
 
 # --- host-tool list: default set + V3_HOST_TOOLS env + --host-tool flags ---

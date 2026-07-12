@@ -10,7 +10,7 @@ set -euo pipefail
 
 REG="ghcr.io/advl"
 BASE="$REG/nvim-base"
-THIN="$REG/nvim3"
+THIN="$REG/nvim"
 GIT_SHA="$(git rev-parse HEAD)"
 TAG="$(date -u +%Y.%m.%d)"   # calver, human-readable; the digest is the truth
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -52,6 +52,6 @@ NVIM_GIT_SHA=$GIT_SHA
 EOF
 
 echo "==> done. Review + commit versions.env, and make the GHCR packages public if"
-echo "    the fleet pulls unauthenticated:  gh api -X PATCH /user/packages/container/nvim3 ..."
+echo "    the fleet pulls unauthenticated:  gh api -X PATCH /user/packages/container/nvim ..."
 echo "    (or via the GitHub package settings page)."
 cat versions.env
