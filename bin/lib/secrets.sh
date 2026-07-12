@@ -12,6 +12,11 @@
 # A future hardening (deferred to the AI phase) could switch to an --env-file mount.
 
 v3_secrets() {
+  # OPT-IN, default OFF ([v2-secrets] flip 2026-07-12): the AI-light editor
+  # consumes no project secrets by default — injecting the whole Doppler config
+  # on every launch was exactly CR-6's over-injection (and shows in `docker
+  # inspect`). Enable per run: `v3 --secrets` or V3_SECRETS=1.
+  [ "${V3_SECRETS:-0}" = "1" ] || return 0
   command -v doppler >/dev/null 2>&1 || return 0
   local env_out; env_out="$(doppler secrets download --format docker --no-file 2>/dev/null || true)"
   [ -n "$env_out" ] || return 0

@@ -59,6 +59,7 @@ ARGS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --check) CHECK=1; shift ;;
+    --secrets) V3_SECRETS=1; shift ;;
     --host-tool)
       [ $# -ge 2 ] || { echo "v3: --host-tool needs a tool name" >&2; exit 2; }
       V3_HOST_TOOL_LIST+=("$2"); shift 2 ;;
@@ -101,7 +102,14 @@ if [ "$CHECK" -eq 1 ]; then
   # every LSP + formatter with its TYPED origin (project/venv/host/baked, per
   # the declared V3_ORIGIN_HOST_TOOLS metadata). See lib/check.lua.
   OPTS+=(-v "$_V3_DIR/lib/check.lua:/df-check.lua:ro" -e "NVIM_IMAGE=$DOCKER_IMAGE")
-  exec "$DOCKER" run "${OPTS[@]}" "$DOCKER_IMAGE" --headless "+luafile /df-check.lua" "${ARGS[@]}"
 fi
 
-exec "$DOCKER" run "${OPTS[@]}" "$DOCKER_IMAGE" "${ARGS[@]}"
+# No exec: the EXIT trap must run to remove the per-session copilot copy.
+_v3_cleanup() { [ -n "${_V3_COPILOT_TMP:-}" ] && rm -rf "$_V3_COPILOT_TMP"; }
+trap _v3_cleanup EXIT
+
+if [ "$CHECK" -eq 1 ]; then
+  "$DOCKER" run "${OPTS[@]}" "$DOCKER_IMAGE" --headless "+luafile /df-check.lua" "${ARGS[@]}"
+else
+  "$DOCKER" run "${OPTS[@]}" "$DOCKER_IMAGE" "${ARGS[@]}"
+fi
