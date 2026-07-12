@@ -17,7 +17,7 @@ end
 local venv = vim.env.VIRTUAL_ENV
 
 local function origin(path)
-  if not path or path == "" then return "?" end
+  if not path or path == "" then return "builtin" end
   if host_tools[vim.fs.basename(path)] then return "host" end
   if venv and venv ~= "" and path:sub(1, #venv) == venv then return "venv" end
   if path:find("^/x/") then return "project" end
@@ -107,7 +107,10 @@ for _, f in ipairs(files) do
     for _, name in ipairs(conform.list_formatters_for_buffer(buf) or {}) do
       local info = conform.get_formatter_info(name, buf)
       if info.available then
-        table.insert(fmts, ("%s[%s]"):format(name, origin(info.command)))
+        -- info.command may be a bare name (e.g. "ruff"): resolve via PATH
+        -- (which includes $VIRTUAL_ENV/bin) before classifying, or the venv
+        -- tool would misreport as baked.
+        table.insert(fmts, ("%s[%s]"):format(name, origin(respath(info.command))))
       else
         table.insert(fmts, name .. "[NOT FOUND]")
       end
