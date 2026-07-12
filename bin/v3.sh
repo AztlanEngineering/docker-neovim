@@ -54,9 +54,11 @@ if [ -n "${V3_HOST_TOOLS:-}" ]; then
   # shellcheck disable=SC2206
   V3_HOST_TOOL_LIST+=(${V3_HOST_TOOLS})
 fi
+CHECK=0
 ARGS=()
 while [ $# -gt 0 ]; do
   case "$1" in
+    --check) CHECK=1; shift ;;
     --host-tool)
       [ $# -ge 2 ] || { echo "v3: --host-tool needs a tool name" >&2; exit 2; }
       V3_HOST_TOOL_LIST+=("$2"); shift 2 ;;
@@ -67,12 +69,27 @@ while [ $# -gt 0 ]; do
 done
 
 # --- compose the docker-run flags via the modules ---
-OPTS=(--rm -it -v "$(pwd):/x/")
+if [ "$CHECK" -eq 1 ]; then
+  # headless probe: no TTY/stdin, and no secrets — a toolchain report must not
+  # pull the vault
+  OPTS=(--rm -v "$(pwd):/x/")
+else
+  OPTS=(--rm -it -v "$(pwd):/x/")
+fi
 v3_venv
 v3_host_tools
 v3_copilot
 v3_term
-v3_secrets
+[ "$CHECK" -eq 1 ] || v3_secrets
 v3_gitident
+
+if [ "$CHECK" -eq 1 ]; then
+  # `v3 --check [files...]` — mount the probe (lives in this repo, NOT baked:
+  # it iterates on the launcher's cadence) and print the cwd's toolchain report:
+  # every LSP + formatter with its TYPED origin (project/venv/host/baked, per
+  # the declared V3_ORIGIN_HOST_TOOLS metadata). See lib/check.lua.
+  OPTS+=(-v "$_V3_DIR/lib/check.lua:/df-check.lua:ro" -e "NVIM_IMAGE=$DOCKER_IMAGE")
+  exec "$DOCKER" run "${OPTS[@]}" "$DOCKER_IMAGE" --headless "+luafile /df-check.lua" "${ARGS[@]}"
+fi
 
 exec "$DOCKER" run "${OPTS[@]}" "$DOCKER_IMAGE" "${ARGS[@]}"
