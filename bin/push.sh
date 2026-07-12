@@ -8,7 +8,7 @@
 # base first (capture its digest), pin the thin FROM to that digest, then thin.
 set -euo pipefail
 
-REG="ghcr.io/aztlanengineering"
+REG="ghcr.io/advl"
 BASE="$REG/nvim-base"
 THIN="$REG/nvim3"
 GIT_SHA="$(git rev-parse HEAD)"
