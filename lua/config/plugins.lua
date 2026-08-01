@@ -66,6 +66,11 @@ for _, g in ipairs({ "Normal", "NormalNC", "SignColumn", "NormalFloat", "VertSpl
   vim.api.nvim_set_hl(0, g, { bg = "none" })
 end
 
+-- Snacks paints the directory prefix of every picker/explorer path with
+-- SnacksPickerDir, which iceberg resolves to a near-background navy —
+-- unreadable. Iceberg's comment tone: secondary but legible.
+vim.api.nvim_set_hl(0, "SnacksPickerDir", { fg = "#6b7089" })
+
 require("nvim-web-devicons").setup()
 
 -- blink.cmp -----------------------------------------------------------------
