@@ -107,6 +107,14 @@ if "$DOCKER" --version 2>/dev/null | grep -qi podman \
    || readlink -f "$(command -v "$DOCKER" 2>/dev/null)" 2>/dev/null | grep -qi podman; then
   OPTS+=(--userns=keep-id:uid=1000,gid=1000)
 fi
+
+# df theme layer ([nvim-theme]): mount the rendered nvim palette fragment so
+# the editor follows theme-switch at (re)launch. Path is repo-relative from
+# the VENDORED location (df/tools/nvim → df root); in the editor repo's own
+# checkout the file does not exist → no mount → baked iceberg. Override with
+# NVIM_THEME_FILE.
+_V3_THEME="${NVIM_THEME_FILE:-$_V3_DIR/../../nix/home/files/nvim/theme.lua}"
+[ -f "$_V3_THEME" ] && OPTS+=(-v "$_V3_THEME:/df-theme.lua:ro")
 v3_venv
 v3_host_tools
 v3_copilot
