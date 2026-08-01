@@ -25,12 +25,16 @@ vim.api.nvim_create_autocmd("FileType", {
     -- The core live-coding gesture: eval the paragraph (= one pattern block).
     bmap("n", "<C-e>", "<Plug>TidalParagraphSend", "Tidal: eval paragraph")
     bmap("v", "<C-e>", "<Plug>TidalRegionSend", "Tidal: eval selection")
-    bmap("n", "<Leader>tl", "<Plug>TidalLineSend", "Tidal: eval line")
-    -- Local hush for flow only — the GLOBAL panic path is sway's $mod+Ctrl+m
-    -- → `tidal hush`, editor-independent by design (spec rule 2).
-    bmap("n", "<Leader>th", "<cmd>TidalHush<cr>", "Tidal: hush")
-    bmap("n", "<Leader>ts", function()
-      vim.cmd("TidalSilence " .. vim.v.count1)
-    end, "Tidal: silence stream [count]")
+    -- One-letter set (collision-checked vs keymaps/preferences: all free;
+    -- buffer-local anyway, so .tidal buffers are the only place these exist).
+    bmap("n", "<Leader>l", "<Plug>TidalLineSend", "Tidal: eval line")
+    -- ,1..,9 silence that stream directly — mirrors d1..d9.
+    for i = 1, 9 do
+      bmap("n", "<Leader>" .. i, "<cmd>TidalSilence " .. i .. "<cr>", "Tidal: silence d" .. i)
+    end
+    -- Local hush for flow only (,0 = the whole board, ,h = the word) — the
+    -- GLOBAL panic path is sway's $mod+Ctrl+m → `tidal hush` (spec rule 2).
+    bmap("n", "<Leader>0", "<cmd>TidalHush<cr>", "Tidal: hush")
+    bmap("n", "<Leader>h", "<cmd>TidalHush<cr>", "Tidal: hush")
   end,
 })
