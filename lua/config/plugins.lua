@@ -75,6 +75,22 @@ end
 -- unreadable. Iceberg's comment tone: secondary but legible.
 vim.api.nvim_set_hl(0, "SnacksPickerDir", { fg = "#6b7089" })
 
+-- The EXPLORER never emits SnacksPickerDir: its source sets filename_only, so
+-- the formatter pushes one segment and the dir_hl branch is dead code. Its dim
+-- classes default-link to NonText (#242940 = 1.24:1 on the iceberg bg —
+-- invisible, not merely dim), so they need the same base03 treatment.
+for _, g in ipairs({
+  "SnacksPickerPathHidden",
+  "SnacksPickerPathIgnored",
+  "SnacksPickerGitStatusUntracked",
+  "SnacksPickerGitStatusIgnored",
+}) do
+  vim.api.nvim_set_hl(0, g, { fg = "#6b7089" })
+end
+-- Tree guides one step darker than the names they lead to (base11): structure
+-- you can follow without it competing with the filenames.
+vim.api.nvim_set_hl(0, "SnacksPickerTree", { fg = "#454b68" })
+
 require("nvim-web-devicons").setup()
 
 -- blink.cmp -----------------------------------------------------------------
