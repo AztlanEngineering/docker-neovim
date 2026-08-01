@@ -16,6 +16,7 @@
 --  * NO build hooks remain (blink fuzzy=lua; treesitter parsers baked separately).
 
 local ai = require("config.ai")
+local icons = require("config.icons") -- [cozette-icons] Cozette-only glyph vocabulary
 
 -- rtp builtins lazy.nvim disabled via performance.rtp.disabled_plugins. vim.pack
 -- has no equivalent; replicate with loaded_* guards, set BEFORE builtins load.
@@ -91,7 +92,11 @@ end
 -- you can follow without it competing with the filenames.
 vim.api.nvim_set_hl(0, "SnacksPickerTree", { fg = "#454b68" })
 
-require("nvim-web-devicons").setup()
+-- [cozette-icons] Overrides MUST ride the FIRST setup(): the plugin latches
+-- `loaded` and silently ignores opts on every later call. `strict` stays unset
+-- on purpose — strict mode reads the split by-filename/by-extension tables,
+-- which `override` never reaches, so it would quietly undo all of this.
+require("nvim-web-devicons").setup({ override = icons.devicons() })
 
 -- blink.cmp -----------------------------------------------------------------
 do
@@ -133,6 +138,7 @@ do
     notifier = { enabled = true },
     picker = {
       enabled = true,
+      icons = icons.snacks, -- [cozette-icons] dir/file/git glyphs devicons never supplies
       sources = {
         files = { hidden = true, ignored = false, exclude = rg_exclude },
         grep = { hidden = true, ignored = false, exclude = rg_exclude },
