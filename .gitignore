@@ -9,3 +9,4 @@ build.log
 
 # IMPORTANT: nvim-pack-lock.json is TRACKED ON PURPOSE — it is the plugin pin set
 # the image rebuilds from. Do NOT add it here.
+.nvim/

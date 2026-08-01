@@ -13,8 +13,10 @@
 #     (lib/gitident.sh), TERM/COLORTERM (lib/term.sh)
 #   * NO ANTHROPIC key (Phase 0 stripped AI to a toggleable Copilot)
 #
-# Usage: v3 [--host-tool NAME]... [nvim args...] [file...]
+# Usage: v3 [--host-tool NAME]... [--tidal] [nvim args...] [file...]
 #   --host-tool NAME      bind-mount an extra host-global binary (repeatable)
+#   --tidal               mount the host tmux socket for the TidalCycles rig
+#                         (lib/tidal.sh; V3_TIDAL=1 via env) — [tidal-rig] L3
 #   V3_HOST_TOOLS="a b"   same, via env
 #   NVIM_IMAGE=...        override the image (default nvim:local)
 #   V3_DOCKER=podman      use a different OCI runtime
@@ -35,6 +37,8 @@ _V3_DIR="$(dirname "$_V3_SELF")"
 . "$_V3_DIR/lib/gitident.sh"
 # shellcheck source=lib/term.sh
 . "$_V3_DIR/lib/term.sh"
+# shellcheck source=lib/tidal.sh
+. "$_V3_DIR/lib/tidal.sh"
 
 # Image resolution, in precedence: explicit $NVIM_IMAGE env > versions.env (the
 # fleet pointer written by bin/push.sh; digest-pinned) > local build tag.
@@ -60,6 +64,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --check) CHECK=1; shift ;;
     --secrets) V3_SECRETS=1; shift ;;
+    --tidal) V3_TIDAL=1; shift ;;
     --host-tool)
       [ $# -ge 2 ] || { echo "v3: --host-tool needs a tool name" >&2; exit 2; }
       V3_HOST_TOOL_LIST+=("$2"); shift 2 ;;
@@ -89,10 +94,24 @@ if [ "$CHECK" -eq 1 ]; then
 else
   OPTS=(--rm -it -v "$(pwd):/x/")
 fi
+# uid mapping — BACK-PORTED from df's vendored copy 2026-08-01 (it landed
+# fleet-side first, for u1). The image bakes `USER 1000:1000`; under ROOTLESS
+# PODMAN the default mapping sends your host uid to container-root, so mounted
+# files land root-owned inside and the uid-1000 editor can't write them.
+# `keep-id:uid=1000,gid=1000` remaps YOUR host uid — whatever it is — to 1000
+# inside: host-uid-agnostic, correct on every machine. Podman ONLY (docker
+# would error on the flag), detected TWO ways because the NixOS dockerCompat
+# shim prints "docker version ..." and only the resolved binary path betrays
+# podman.
+if "$DOCKER" --version 2>/dev/null | grep -qi podman \
+   || readlink -f "$(command -v "$DOCKER" 2>/dev/null)" 2>/dev/null | grep -qi podman; then
+  OPTS+=(--userns=keep-id:uid=1000,gid=1000)
+fi
 v3_venv
 v3_host_tools
 v3_copilot
 v3_term
+v3_tidal
 [ "$CHECK" -eq 1 ] || v3_secrets
 v3_gitident
 

@@ -43,6 +43,10 @@ local specs = {
   { src = "https://github.com/lewis6991/gitsigns.nvim" },
   { src = "https://github.com/folke/which-key.nvim" },
   { src = "https://github.com/cocopon/iceberg.vim" },
+  -- [tidal-rig] L3: sends .tidal blocks to the HOST rig over the tmux socket
+  -- v3 --tidal mounts (lua/config/tidal.lua). Pure vimscript, no build step,
+  -- ships its own ft=tidal detect + syntax — no treesitter parser needed.
+  { src = "https://github.com/tidalcycles/vim-tidal" },
   { src = "https://github.com/catgoose/nvim-colorizer.lua" },
   { src = "https://github.com/nvim-lualine/lualine.nvim" },
   { src = "https://github.com/nvim-tree/nvim-web-devicons" }, -- lualine dep (no auto-resolve)

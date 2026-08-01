@@ -22,6 +22,14 @@ LABEL org.opencontainers.image.title="nvim3" \
       org.opencontainers.image.revision="${GIT_SHA}" \
       org.opencontainers.image.licenses="MIT"
 
+# tmux CLIENT only — the vim-tidal bridge ([tidal-rig] L3) talks to the HOST
+# tmux server through the socket `v3 --tidal` mounts; no server runs in here.
+# Ubuntu's tmux vs the host's nixpkgs tmux is an ACCEPTED version-skew risk
+# (ratified over mounting /nix/store:ro) — recheck at every image refresh.
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends tmux \
+ && rm -rf /var/lib/apt/lists/*
+
 USER 1000:1000
 WORKDIR /home/myuser
 
