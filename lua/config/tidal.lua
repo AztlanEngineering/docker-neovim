@@ -16,6 +16,9 @@ vim.api.nvim_create_autocmd("FileType", {
   pattern = "tidal",
   group = vim.api.nvim_create_augroup("df_tidal", { clear = true }),
   callback = function(ev)
+    -- vim-tidal's ftplugin sets no 'commentstring', which leaves the builtin
+    -- gcc/gc dead on .tidal buffers. Tidal is Haskell: -- line comments.
+    vim.bo[ev.buf].commentstring = "-- %s"
     local function bmap(mode, lhs, rhs, desc)
       vim.keymap.set(mode, lhs, rhs, { buffer = ev.buf, remap = true, silent = true, desc = desc })
     end
