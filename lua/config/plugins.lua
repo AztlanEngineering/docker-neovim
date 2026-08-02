@@ -142,9 +142,8 @@ do
       sources = {
         files = { hidden = true, ignored = false, exclude = rg_exclude },
         grep = { hidden = true, ignored = false, exclude = rg_exclude },
-        -- EXPLORER WIDTH: 26 columns, down from snacks' default 40 (Adrian
-        -- 2026-08-03, "two thirds"). 40 * 0.66 = 26.4; two-thirds exactly is
-        -- 26.67, so 26 and 27 both answer the ask -- 26 is nearer the stated 66%.
+        -- EXPLORER WIDTH: 20 columns, half of snacks' default 40 (Adrian
+        -- 2026-08-03; briefly 26 that same day, then narrowed again).
         --
         -- BOTH width AND min_width, and that is the whole trick: the `sidebar`
         -- preset this source resolves sets width = 40 AND min_width = 40
@@ -159,7 +158,7 @@ do
         explorer = {
           hidden = true,
           ignored = false,
-          layout = { layout = { width = 26, min_width = 26 } },
+          layout = { layout = { width = 20, min_width = 20 } },
         },
       },
     },
