@@ -142,7 +142,25 @@ do
       sources = {
         files = { hidden = true, ignored = false, exclude = rg_exclude },
         grep = { hidden = true, ignored = false, exclude = rg_exclude },
-        explorer = { hidden = true, ignored = false },
+        -- EXPLORER WIDTH: 26 columns, down from snacks' default 40 (Adrian
+        -- 2026-08-03, "two thirds"). 40 * 0.66 = 26.4; two-thirds exactly is
+        -- 26.67, so 26 and 27 both answer the ask -- 26 is nearer the stated 66%.
+        --
+        -- BOTH width AND min_width, and that is the whole trick: the `sidebar`
+        -- preset this source resolves sets width = 40 AND min_width = 40
+        -- (snacks/picker/config/layouts.lua), so setting width alone is clamped
+        -- straight back to 40 and looks like the option did nothing.
+        --
+        -- The doubled `layout` key is snacks' own documented idiom for
+        -- overriding a preset's geometry from a source -- their comment in
+        -- picker/config/sources.lua shows this exact shape for moving the
+        -- explorer to the right. Outer = the source's layout config, inner =
+        -- the window layout merged over the preset.
+        explorer = {
+          hidden = true,
+          ignored = false,
+          layout = { layout = { width = 26, min_width = 26 } },
+        },
       },
     },
     dashboard = { enabled = false },
