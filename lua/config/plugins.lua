@@ -197,6 +197,10 @@ do
       scss = { "biome" },
       markdown = { "prettier" },
       html = { "prettier" },
+      -- turtle has no conform formatter on purpose: sem-lsp owns it, and the
+      -- explicit empty list keeps the `_` catch-all from shadowing the LSP
+      -- (conform only falls back to lsp_format when NO formatter matches).
+      turtle = {},
       ["_"] = { "trim_whitespace" },
     },
     formatters = {
@@ -223,7 +227,9 @@ do
     vim.notify("Format on save (buffer): " .. (format_disabled_bufs[bufnr] and "OFF" or "ON"))
   end, { desc = "Toggle format-on-save for current buffer" })
   vim.keymap.set("n", "<leader>f", function()
-    require("conform").format({ async = true })
+    -- lsp_format matches format-on-save: without it conform's default is
+    -- "never" and LSP-only filetypes (turtle/sem-lsp) silently no-op.
+    require("conform").format({ async = true, lsp_format = "fallback" })
   end, { desc = "Format buffer" })
   vim.keymap.set("n", "<leader>F", "<cmd>FormatToggle<cr>", { desc = "Toggle format-on-save" })
 end
