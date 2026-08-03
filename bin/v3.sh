@@ -138,5 +138,18 @@ trap _v3_cleanup EXIT
 if [ "$CHECK" -eq 1 ]; then
   "$DOCKER" run "${OPTS[@]}" "$DOCKER_IMAGE" --headless "+luafile /df-check.lua" "${ARGS[@]}"
 else
-  "$DOCKER" run "${OPTS[@]}" "$DOCKER_IMAGE" "${ARGS[@]}"
+  # PIN 'background' ([nvim-theme]). Neovim's OSC-11 handler re-sets the option
+  # on EVERY terminal reply, unconditionally — a same-value set still fires
+  # OptionSet but NOT ColorScheme, and lualine's own `autocmd OptionSet
+  # background` re-runs setup(), clearing every lualine_* group and repainting
+  # it from the bundled iceberg_dark table. The statusline alone reverts to
+  # iceberg mid-session; everything else keeps the machine palette. Setting it
+  # here makes core drop that TermResponse autocmd at VimEnter. It MUST come
+  # from the launcher: core only drops it when 'background' was last set from
+  # NON-Lua (last_set_sid ~= -8), so `vim.o.background` or `vim.cmd("set ...")`
+  # in options.lua would not do it (measured: sid -8 keeps it, sid -2 drops it).
+  # Always dark: the config loads `colorscheme iceberg` (dark) on every scheme,
+  # and df's fragment repaints over it. --headless (the --check arm) never runs
+  # the OSC-11 block at all, so it needs nothing.
+  "$DOCKER" run "${OPTS[@]}" "$DOCKER_IMAGE" --cmd 'set background=dark' "${ARGS[@]}"
 fi
