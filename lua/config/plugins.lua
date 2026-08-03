@@ -225,10 +225,11 @@ do
       scss = { "biome" },
       markdown = { "prettier" },
       html = { "prettier" },
-      -- turtle has no conform formatter on purpose: sem-lsp owns it, and the
-      -- explicit empty list keeps the `_` catch-all from shadowing the LSP
-      -- (conform only falls back to lsp_format when NO formatter matches).
-      turtle = {},
+      -- turtle has no conform formatter on purpose: sem-lsp owns it. An empty
+      -- list does NOT opt out of the `_` catch-all (conform treats {} as
+      -- unconfigured), so the per-ft lsp_format override is the working seam —
+      -- verified against a live instance where {} still ran trim_whitespace.
+      turtle = { lsp_format = "prefer" },
       ["_"] = { "trim_whitespace" },
     },
     formatters = {
