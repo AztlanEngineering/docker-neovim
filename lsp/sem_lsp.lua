@@ -3,7 +3,16 @@
 -- The binary is host-built and bind-mounted by the launcher at /usr/local/bin
 -- (glibc — runs natively in the glibc image, no gcompat).
 return {
-  cmd = { "sem-lsp" },
+  -- Prefer the launcher's DIRECTORY mount (name resolved at spawn time, so a
+  -- host rename-swap reaches the next :LspRestart); the /usr/local/bin file
+  -- mount is the fallback — it pins the container-start inode.
+  cmd = (function()
+    local live = "/opt/hosttools/sem-lsp.d/sem-lsp"
+    if vim.uv.fs_stat(live) then
+      return { live }
+    end
+    return { "sem-lsp" }
+  end)(),
   cmd_env = {
     -- Directory form is canonical in sem-core (it wants a dir). WORKDIR is /x,
     -- but a :cd inside nvim would change the spawn cwd, so pin it.

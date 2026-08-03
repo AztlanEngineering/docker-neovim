@@ -12,6 +12,12 @@ v3_host_tools() {
     [ -n "$p" ] || continue
     rp="$(readlink -f "$p" 2>/dev/null || echo "$p")"   # mount the real binary
     OPTS+=(-v "$rp:/usr/local/bin/$t:ro")
+    # ALSO mount the tool's directory: a FILE bind-mount pins the inode at
+    # container start, so a host-side rename-swap (the atomic install ritual)
+    # never reaches a running container. A DIRECTORY mount resolves names at
+    # open() time — /opt/hosttools/<t>.d/<t> is always the CURRENT host build,
+    # picked up by any newly spawned process (e.g. :LspRestart), no relaunch.
+    OPTS+=(-v "$(dirname "$rp"):/opt/hosttools/$t.d:ro")
     mounted="${mounted:+$mounted }$t"
   done
   # Typed-mounts metadata: DECLARE which /usr/local/bin entries are host mounts,
