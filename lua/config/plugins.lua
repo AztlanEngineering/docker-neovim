@@ -67,23 +67,37 @@ vim.pack.add(specs, { confirm = false, load = true })
 
 -- Colorscheme first, then the transparent-bg overrides.
 vim.cmd("colorscheme iceberg")
-for _, g in ipairs({ "Normal", "NormalNC", "SignColumn", "VertSplit", "EndOfBuffer", "TabLineFill" }) do
+for _, g in ipairs({ "Normal", "NormalNC", "SignColumn", "NormalFloat", "VertSplit", "EndOfBuffer", "TabLineFill" }) do
   vim.api.nvim_set_hl(0, g, { bg = "none" })
 end
 
--- NormalFloat is the ONE exception to the transparent sweep above: with bg=none
--- a hover/diagnostic float is the terminal's own background, so it dissolves
--- into the buffer with nothing marking its edge. Give it the popup surface.
+-- LSP TOOLTIPS ONLY get a surface. With NormalFloat transparent (above) a hover
+-- dissolves into the buffer, but colouring NormalFloat itself is far too wide a
+-- brush: snacks' explorer and pickers are floats too and take their Normal from
+-- it (`win.lua` maps Normal->SnacksNormal->NormalFloat), so the sidebar and `=`
+-- would gain a panel background nobody asked for.
 --
--- LINK, never a hex. df's generator skips pure links (they follow covered
--- targets for free), and Pmenu rides the `ui-menu-bg` slot — whose matrix
--- comment already reads "ui/accent bg · 1.25:1 over base02 — floats". So this
--- follows every scheme with no new slot and no template change.
+-- open_floating_preview is the exact seam: hover and signature help route
+-- through it, and NOTHING in snacks does — its windows set their own
+-- winhighlight. Wrapping it scopes the surface to the tooltip and only the
+-- tooltip. Append to winhighlight rather than assign: nvim already puts
+-- "EndOfBuffer:,EndOfBuffer:" there and clobbering it re-shows the filler.
 --
--- NOT simply dropping NormalFloat from the sweep: iceberg's own value is
--- #07080d, which is neither a palette nor a ui- slot, so the generator would
--- exclude it and every scheme would inherit iceberg's near-black float.
-vim.api.nvim_set_hl(0, "NormalFloat", { link = "Pmenu" })
+-- Pmenu, not a hex — it rides df's `ui-menu-bg` slot ("ui/accent bg · 1.25:1
+-- over base02 — floats"), so the tooltip follows every scheme. Referencing it
+-- from winhighlight adds NO highlight group, so [nvim-theme]'s census and its
+-- lossless gate are untouched.
+do
+  local open = vim.lsp.util.open_floating_preview
+  vim.lsp.util.open_floating_preview = function(...)
+    local buf, win = open(...)
+    if win and vim.api.nvim_win_is_valid(win) then
+      local cur = vim.wo[win].winhighlight
+      vim.wo[win].winhighlight = (cur ~= "" and cur .. "," or "") .. "NormalFloat:Pmenu"
+    end
+    return buf, win
+  end
+end
 
 -- Snacks paints the directory prefix of every picker/explorer path with
 -- SnacksPickerDir, which iceberg resolves to a near-background navy —
