@@ -12,32 +12,61 @@ REG="ghcr.io/advl"
 BASE="$REG/nvim-base"
 THIN="$REG/nvim"
 GIT_SHA="$(git rev-parse HEAD)"
-TAG="$(date -u +%Y.%m.%d)"   # calver, human-readable; the digest is the truth
+# calver, human-readable; the digest is the truth. OVERRIDABLE because a second
+# push on the same day would otherwise re-point the existing date tag at a new
+# image — which is why the git log carries hand-edited 2026.08.03a/b suffixes
+# that never existed on GHCR. Pass the suffix instead:  TAG=2026.08.03c push.sh
+TAG="${TAG:-$(date -u +%Y.%m.%d)}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-echo "==> GHCR login (gh token)"
-gh auth token | docker login ghcr.io -u "$(gh api user --jq .login)" --password-stdin
+# ENGINE. This fleet is rootless PODMAN — on NixOS `docker` is a symlink to it
+# (v3.sh detects the same dockerCompat shim). Podman aliases `buildx build` to
+# buildah, which has neither --provenance nor --metadata-file, so the buildx
+# path fails outright here. Detect and use each engine's native build+push;
+# both capture the REGISTRY manifest digest, which is what versions.env pins.
+ENGINE=docker
+if docker buildx version 2>/dev/null | grep -qi buildah; then ENGINE=podman; fi
+echo "==> engine: $ENGINE"
 
-echo "==> build + push BASE ($BASE:$TAG)"
-docker buildx build -f Dockerfile.base --target final \
-  --build-arg GIT_SHA="$GIT_SHA" \
-  -t "$BASE:$TAG" -t "$BASE:latest" \
-  --provenance=false \
-  --metadata-file /tmp/base-meta.json \
-  --push .
-BASE_DIGEST="$(jq -r '."containerimage.digest"' /tmp/base-meta.json)"
-echo "    base digest: $BASE_DIGEST"
+# build_and_push <repo> <digest-outfile> [build args...]
+build_and_push() {
+  local repo="$1" digestfile="$2"; shift 2
+  if [ "$ENGINE" = podman ]; then
+    podman build "$@" -t "$repo:$TAG" -t "$repo:latest" .
+    podman push --digestfile "$digestfile" "$repo:$TAG"
+    podman push "$repo:latest"
+  else
+    docker buildx build "$@" -t "$repo:$TAG" -t "$repo:latest" \
+      --provenance=false --metadata-file /tmp/push-meta.json --push .
+    jq -r '."containerimage.digest"' /tmp/push-meta.json > "$digestfile"
+  fi
+}
+
+echo "==> GHCR login (gh token)"
+gh auth token | "$ENGINE" login ghcr.io -u "$(gh api user --jq .login)" --password-stdin
+
+# SKIP_BASE=1 reuses the base digest already pinned in versions.env. The base is
+# apt + npm, so a rebuild can silently pull newer upstreams and re-pin the fleet
+# to a base nothing has run yet. A config-layer edit (the common case — see
+# Dockerfile's header) must NOT drag that along. Omit it when the base changed.
+if [ -n "${SKIP_BASE:-}" ] && [ -f versions.env ]; then
+  BASE_DIGEST="$(sed -n 's/^NVIM_BASE_IMAGE=.*@//p' versions.env)"
+  [ -n "$BASE_DIGEST" ] || { echo "SKIP_BASE: no NVIM_BASE_IMAGE digest in versions.env" >&2; exit 1; }
+  echo "==> SKIP_BASE: reusing base@$BASE_DIGEST (not rebuilt, not re-pushed)"
+else
+  echo "==> build + push BASE ($BASE:$TAG)"
+  build_and_push "$BASE" /tmp/base.digest -f Dockerfile.base --target final \
+    --build-arg GIT_SHA="$GIT_SHA"
+  BASE_DIGEST="$(cat /tmp/base.digest)"
+  echo "    base digest: $BASE_DIGEST"
+fi
 
 echo "==> build + push THIN ($THIN:$TAG) FROM base@$BASE_DIGEST"
-docker buildx build \
+build_and_push "$THIN" /tmp/thin.digest \
   --build-arg BASE_IMAGE="$BASE@$BASE_DIGEST" \
-  --build-arg GIT_SHA="$GIT_SHA" \
-  -t "$THIN:$TAG" -t "$THIN:latest" \
-  --provenance=false \
-  --metadata-file /tmp/thin-meta.json \
-  --push .
-THIN_DIGEST="$(jq -r '."containerimage.digest"' /tmp/thin-meta.json)"
+  --build-arg GIT_SHA="$GIT_SHA"
+THIN_DIGEST="$(cat /tmp/thin.digest)"
 echo "    thin digest: $THIN_DIGEST"
 
 echo "==> write versions.env (the fleet pointer; v3 reads NVIM_IMAGE from here)"

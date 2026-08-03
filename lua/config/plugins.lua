@@ -67,9 +67,23 @@ vim.pack.add(specs, { confirm = false, load = true })
 
 -- Colorscheme first, then the transparent-bg overrides.
 vim.cmd("colorscheme iceberg")
-for _, g in ipairs({ "Normal", "NormalNC", "SignColumn", "NormalFloat", "VertSplit", "EndOfBuffer", "TabLineFill" }) do
+for _, g in ipairs({ "Normal", "NormalNC", "SignColumn", "VertSplit", "EndOfBuffer", "TabLineFill" }) do
   vim.api.nvim_set_hl(0, g, { bg = "none" })
 end
+
+-- NormalFloat is the ONE exception to the transparent sweep above: with bg=none
+-- a hover/diagnostic float is the terminal's own background, so it dissolves
+-- into the buffer with nothing marking its edge. Give it the popup surface.
+--
+-- LINK, never a hex. df's generator skips pure links (they follow covered
+-- targets for free), and Pmenu rides the `ui-menu-bg` slot — whose matrix
+-- comment already reads "ui/accent bg · 1.25:1 over base02 — floats". So this
+-- follows every scheme with no new slot and no template change.
+--
+-- NOT simply dropping NormalFloat from the sweep: iceberg's own value is
+-- #07080d, which is neither a palette nor a ui- slot, so the generator would
+-- exclude it and every scheme would inherit iceberg's near-black float.
+vim.api.nvim_set_hl(0, "NormalFloat", { link = "Pmenu" })
 
 -- Snacks paints the directory prefix of every picker/explorer path with
 -- SnacksPickerDir, which iceberg resolves to a near-background navy —
