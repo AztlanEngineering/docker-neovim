@@ -40,6 +40,12 @@ RUN rm -rf /home/myuser/.config/nvim/lua /home/myuser/.config/nvim/init.lua
 # COPY order is irrelevant for caching here (last layers). nvim-pack-lock.json is
 # copied so the thin sync pins against the SAME lock as the base.
 COPY --chown=1000:1000 init.lua stylua.toml nvim-pack-lock.json /home/myuser/.config/nvim/
+# The LSP registry lands in the CONFIG dir, not /tmp. Dockerfile.base copies it
+# too, but only to derive the npm pins, and deletes it in the same layer — this
+# copy is the RUNTIME one that lua/config/lsp.lua reads for prefer_local
+# resolution. Same file, vendored from df's nix/lsp/servers.json; the base uses
+# it at build time, the thin at run time.
+COPY --chown=1000:1000 lsp-servers.json /home/myuser/.config/nvim/lsp-servers.json
 COPY --chown=1000:1000 lua /home/myuser/.config/nvim/lua
 # Native LSP config dirs (outside lua/): the lsp/ bespoke servers + after/lsp/
 # overrides. Real content lands here (base only had the stub lsp.lua).

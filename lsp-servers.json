@@ -1,0 +1,143 @@
+{
+  "$comment": [
+    "THE FLEET'S LSP REGISTRY — one source of truth for every surface that runs a",
+    "language server. Consumers, all reading THIS file:",
+    "",
+    "  nix/home/core.nix        -> home.packages (the host-global servers)",
+    "  nix/home/ai.nix          -> the generated Claude Code marketplace (lspServers)",
+    "  advl/nvim Dockerfile.base-> the npm pin line (via the vendored copy)",
+    "  advl/nvim lua/config/lsp -> prefer_local resolution + the enable list",
+    "",
+    "WHY JSON AND NOT NIX: the nvim image is Ubuntu + npm and cannot evaluate nix,",
+    "so a .nix registry could never reach it. JSON is the only interlingua all four",
+    "consumers can read. nix does builtins.fromJSON, bash does jq, lua does",
+    "vim.json.decode.",
+    "",
+    "WHAT THIS REPLACES: four hand-maintained lists that mirrored each other by",
+    "comment and had already drifted — basedpyright was 1.39.3 on the host against",
+    "1.39.8 in the image (measured 2026-08-03).",
+    "",
+    "FIELDS",
+    "  id                  stable key; also the Claude lspServers entry name",
+    "  nixPackages         nixpkgs attrs for the HOST (helix + host editing + CC)",
+    "  npm                 exact pins for the nvim IMAGE. null = not npm-installed",
+    "                      (lua_ls is a tarball, nil comes from nixpkgs only)",
+    "  command / args      how to spawn it. Claude forbids spaces in command.",
+    "  preferLocal         resolve <root>/node_modules/.bin/<command> FIRST when",
+    "                      present. Only meaningful for npm-delivered servers.",
+    "  nvim                vim.lsp.enable() name, or null if the image omits it",
+    "  hostOnly            true = never baked into the image",
+    "  extensionToLanguage Claude Code's required map. Values are LANGUAGE IDS",
+    "                      (LSP spec), not filetypes."
+  ],
+  "servers": [
+    {
+      "id": "typescript",
+      "nixPackages": ["typescript-language-server", "typescript"],
+      "npm": ["typescript-language-server@5.3.0", "typescript@6.0.3"],
+      "command": "typescript-language-server",
+      "args": ["--stdio"],
+      "preferLocal": true,
+      "nvim": "ts_ls",
+      "hostOnly": false,
+      "extensionToLanguage": {
+        ".ts": "typescript",
+        ".tsx": "typescriptreact",
+        ".mts": "typescript",
+        ".cts": "typescript",
+        ".js": "javascript",
+        ".jsx": "javascriptreact",
+        ".mjs": "javascript",
+        ".cjs": "javascript"
+      }
+    },
+    {
+      "id": "bash",
+      "nixPackages": ["bash-language-server"],
+      "npm": ["bash-language-server@5.6.0"],
+      "command": "bash-language-server",
+      "args": ["start"],
+      "preferLocal": true,
+      "nvim": "bashls",
+      "hostOnly": false,
+      "extensionToLanguage": { ".sh": "shellscript", ".bash": "shellscript" }
+    },
+    {
+      "id": "yaml",
+      "nixPackages": ["yaml-language-server"],
+      "npm": ["yaml-language-server@1.23.0"],
+      "command": "yaml-language-server",
+      "args": ["--stdio"],
+      "preferLocal": true,
+      "nvim": "yamlls",
+      "hostOnly": false,
+      "extensionToLanguage": { ".yaml": "yaml", ".yml": "yaml" }
+    },
+    {
+      "id": "json",
+      "nixPackages": ["vscode-langservers-extracted"],
+      "npm": ["vscode-langservers-extracted@4.10.0"],
+      "command": "vscode-json-language-server",
+      "args": ["--stdio"],
+      "preferLocal": true,
+      "nvim": "jsonls",
+      "hostOnly": false,
+      "extensionToLanguage": { ".json": "json", ".jsonc": "jsonc" }
+    },
+    {
+      "id": "html",
+      "nixPackages": ["vscode-langservers-extracted"],
+      "npm": null,
+      "command": "vscode-html-language-server",
+      "args": ["--stdio"],
+      "preferLocal": true,
+      "nvim": "html",
+      "hostOnly": false,
+      "extensionToLanguage": { ".html": "html", ".htm": "html" }
+    },
+    {
+      "id": "css",
+      "nixPackages": ["vscode-langservers-extracted"],
+      "npm": null,
+      "command": "vscode-css-language-server",
+      "args": ["--stdio"],
+      "preferLocal": true,
+      "nvim": "cssls",
+      "hostOnly": false,
+      "extensionToLanguage": { ".css": "css", ".scss": "scss", ".less": "less" }
+    },
+    {
+      "id": "python",
+      "nixPackages": ["basedpyright"],
+      "npm": ["basedpyright@1.39.8"],
+      "command": "basedpyright-langserver",
+      "args": ["--stdio"],
+      "preferLocal": true,
+      "nvim": "basedpyright",
+      "hostOnly": false,
+      "extensionToLanguage": { ".py": "python", ".pyi": "python" }
+    },
+    {
+      "id": "lua",
+      "nixPackages": ["lua-language-server"],
+      "npm": null,
+      "command": "lua-language-server",
+      "args": [],
+      "preferLocal": false,
+      "nvim": "lua_ls",
+      "hostOnly": false,
+      "extensionToLanguage": { ".lua": "lua" }
+    },
+    {
+      "id": "nix",
+      "nixPackages": ["nil"],
+      "npm": null,
+      "command": "nil",
+      "args": [],
+      "preferLocal": false,
+      "nvim": null,
+      "hostOnly": true,
+      "extensionToLanguage": { ".nix": "nix" }
+    }
+  ]
+}

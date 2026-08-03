@@ -86,16 +86,31 @@ RUN mkdir -p /opt/lua-language-server \
 # PLAN-DECISIONS #12): v3 bind-mounts it from the host ~/.cargo/bin when present.
 # Baking it caused silent drift + it was dead anyway (needs rustc, never baked).
 
-# ---- pinned npm LSP servers (global; NPM_CONFIG_PREFIX puts bins on PATH) ----
+# ---- pinned npm LSP servers, FROM THE REGISTRY ------------------------------
+# The pins are no longer written here. lsp-servers.json is the fleet's LSP
+# registry, vendored from df (nix/lsp/servers.json) the same way v3.sh is
+# vendored in the other direction — ONE file, four consumers: this image, df's
+# host packages (core.nix), Claude Code's generated plugin (ai.nix), and the
+# prefer_local resolver in lua/config/lsp.lua.
+#
+# It replaces a hand-written list whose df counterpart claimed in a comment to
+# "mirror" it. That mirror had already broken: basedpyright was 1.39.8 here
+# against 1.39.3 on the host (measured 2026-08-03). A list two files must keep
+# equal by hand is a list that will diverge.
+#
+# node, not jq: node is installed above and jq is not, so this costs no extra
+# apt layer. `new Set` because several servers ship in ONE package
+# (vscode-langservers-extracted carries json+html+css) and npm should be asked
+# once. Servers with "npm": null are skipped — lua_ls is a tarball below, nil is
+# host-only.
 ENV NPM_CONFIG_PREFIX=/usr/local
-RUN npm i -g --no-fund --no-audit \
-      typescript-language-server@5.3.0 \
-      typescript@6.0.3 \
-      bash-language-server@5.6.0 \
-      vscode-langservers-extracted@4.10.0 \
-      yaml-language-server@1.23.0 \
-      basedpyright@1.39.8 \
- && npm cache clean --force
+COPY lsp-servers.json /tmp/lsp-servers.json
+RUN set -eu; \
+    pins="$(node -e 'const j=require("/tmp/lsp-servers.json"); const p=[...new Set(j.servers.filter(s=>s.npm).flatMap(s=>s.npm))]; if(!p.length){console.error("ASSERT FAIL: registry yielded no npm pins"); process.exit(1)} console.log(p.join(" "))')"; \
+    echo "installing LSP servers from registry: $pins"; \
+    npm i -g --no-fund --no-audit $pins \
+ && npm cache clean --force \
+ && rm -f /tmp/lsp-servers.json
 # typescript@6.0.3 is REQUIRED by ts_ls (tsls has NO runtime deps; ships no tsc).
 # vscode-langservers-extracted ALSO provides jsonls + html FREE (bin list).
 # basedpyright = always-on Python types/hover/goto (ruff lint/format = project venv).
@@ -144,6 +159,20 @@ COPY --chown=1000:1000 lua/config/plugins.lua /home/myuser/.config/nvim/lua/conf
 COPY --chown=1000:1000 lua/config/ai.lua /home/myuser/.config/nvim/lua/config/ai.lua
 # parsers.lua is read by the bake script AND treesitter.lua — real, before baking.
 COPY --chown=1000:1000 lua/config/parsers.lua /home/myuser/.config/nvim/lua/config/parsers.lua
+# icons.lua is required BY plugins.lua at spec-parse time ([cozette-icons]:
+# `local icons = require("config.icons")`, then icons.devicons() / icons.snacks),
+# so it must be REAL and it must land before the plugin layer.
+#
+# THIS WAS A LATENT BREAK, found 2026-08-03 the first time the base was rebuilt
+# after [cozette-icons] landed: icons.lua was in neither the COPY list nor the
+# stub list, so `require("config.icons")` failed and took the whole plugin +
+# parser bake down with it ("nvim-treesitter not on runtimepath"). The THIN
+# image never noticed — it copies the entire lua/ tree. Only a base rebuild can
+# surface a gap like this, and the base is rebuilt rarely.
+#
+# A STUB WOULD NOT DO: an empty module makes `require` return true, and the very
+# next line indexes it (icons.devicons()), so it must be the real file.
+COPY --chown=1000:1000 lua/config/icons.lua /home/myuser/.config/nvim/lua/config/icons.lua
 
 # Stub behavior-only config files so editing a keymap never busts install/bake.
 # lsp.lua is stubbed too: init.lua requires config.lsp at startup (the build
@@ -156,6 +185,30 @@ RUN touch /home/myuser/.config/nvim/lua/config/options.lua \
           /home/myuser/.config/nvim/lua/config/lsp.lua \
           /home/myuser/.config/nvim/lua/config/tools.lua
 
+# ---- ASSERT: every config module plugins.lua requires actually exists -------
+# The COPY list above (real modules) and the touch list (stubs) together have to
+# cover every `require("config.X")` in plugins.lua. Nothing enforced that, and it
+# broke: [cozette-icons] added `require("config.icons")` and icons.lua was in
+# NEITHER list, so the base failed — two steps later, as
+# "nvim-treesitter not on runtimepath", which points at the wrong thing entirely
+# (found 2026-08-03, the first base rebuild after that change).
+#
+# The thin image cannot catch this: it copies the whole lua/ tree. Only the base
+# splits real-vs-stub, so only the base can drift, and it is rebuilt rarely
+# enough that the gap sat unnoticed. Fails HERE now, naming the missing module.
+RUN cd /home/myuser/.config/nvim && \
+    missing=""; \
+    for m in $(grep -oE 'require\("config\.[a-z_]+"\)' lua/config/plugins.lua \
+               | sed 's/require("config\.//; s/")//' | sort -u); do \
+      [ -f "lua/config/$m.lua" ] || missing="$missing $m"; \
+    done; \
+    if [ -n "$missing" ]; then \
+      echo "ASSERT FAIL: plugins.lua requires config module(s) the base never provides:$missing"; \
+      echo "  -> add a real COPY (if used at spec-parse time) or a stub to the touch list above"; \
+      exit 1; \
+    fi; \
+    echo "config modules required by plugins.lua: all present"
+
 # ---- PLUGIN LAYER (vim.pack) ----
 # Sourcing config.plugins runs vim.pack.add(specs,{confirm=false}) which BLOCKS
 # (clones all in parallel, waits) and HONORS the committed nvim-pack-lock.json
@@ -167,6 +220,34 @@ RUN nvim --headless \
       -c 'lua require("config.plugins")' \
       -c 'lua vim.pack.update(nil, { force = true, target = "lockfile" })' \
       -c 'qa'
+
+# ---- ASSERT: the committed lockfile covers every installed plugin -----------
+# A spec added to plugins.lua WITHOUT regenerating nvim-pack-lock.json installs
+# fine here, then fails at every nvim start: vim.pack finds no locked revision,
+# reaches for git to resolve one, and the .git dirs are stripped below (-190MB)
+# -> "fatal: not a git repository". The message names neither the plugin nor the
+# lockfile, so it reads like a broken image.
+#
+# That is exactly what [tidal-rig] did: vim-tidal went into the specs and the
+# lock stayed at 15 entries against 16 specs (found 2026-08-03). The running
+# image was fine because it predated the spec; only a rebuild exposed it.
+#
+# Compares INSTALLED DIRECTORIES against the lock rather than counting spec
+# lines, because the copilot specs are conditional (config.ai gates them) — a
+# line count would be wrong whenever copilot is off.
+RUN node -e ' \
+  const fs = require("fs"); \
+  const lock = Object.keys(require("/home/myuser/.config/nvim/nvim-pack-lock.json").plugins); \
+  const dir = "/home/myuser/.local/share/nvim/site/pack/core/opt"; \
+  const installed = fs.readdirSync(dir); \
+  const missing = installed.filter((p) => !lock.includes(p)); \
+  if (missing.length) { \
+    console.error("ASSERT FAIL: installed but absent from nvim-pack-lock.json: " + missing.join(", ")); \
+    console.error("  -> regenerate the lock and commit it, or vim.pack will git-resolve it at every startup"); \
+    process.exit(1); \
+  } \
+  console.log("lockfile covers all " + installed.length + " installed plugins"); \
+'
 
 # ---- PARSER BAKE (the one native build) ----
 # Synchronous, serial, asserted (build/install-parsers.lua). Uses the glibc gcc

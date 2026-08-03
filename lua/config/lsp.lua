@@ -50,6 +50,50 @@ end
 --     rust_analyzer (host-tool: v3 mounts it from the host when present; also
 --       needs rustc for its root_dir, so guard on both -> bare .rs never errors),
 --     ruff (project venv), sem_lsp (host-built bind-mount).
+-- PREFER_LOCAL — a project's own node_modules/.bin server wins over the baked
+-- one (Adrian 2026-08-03). The node devshell template already DECLARED this
+-- policy ("tooling versions are the workspace's to pin, not nix's") but nothing
+-- enforced it for language servers: a workspace pinning its own
+-- typescript-language-server was silently ignored on every surface.
+--
+-- WHY NOT SIMPLY PUT node_modules/.bin FIRST ON PATH: Dockerfile.base appends
+-- it deliberately, so that "a mounted repo at /x must not shadow git/node/rg
+-- for the agent session". Prepending re-opens exactly that hole — a repo could
+-- ship a `git` shim and own the session. Resolving the LSP `cmd` instead scopes
+-- the override to language servers and leaves that guard intact.
+--
+-- Driven by lsp-servers.json, the fleet LSP registry vendored from df
+-- (nix/lsp/servers.json) — the same file this image's npm pins, df's host
+-- packages and Claude Code's generated plugin all read.
+do
+  local path = vim.env.HOME .. "/.config/nvim/lsp-servers.json"
+  local ok, raw = pcall(vim.fn.readfile, path)
+  if ok and raw and #raw > 0 then
+    local decoded, reg = pcall(vim.json.decode, table.concat(raw, "\n"))
+    if decoded and reg and reg.servers then
+      for _, s in ipairs(reg.servers) do
+        -- Only npm-delivered servers can meaningfully sit in node_modules/.bin;
+        -- lua_ls is a tarball and nil is host-only, both flagged preferLocal
+        -- false in the registry.
+        if s.preferLocal and s.nvim then
+          vim.lsp.config(s.nvim, {
+            -- A FUNCTION, not a table: resolved per root_dir at spawn time
+            -- rather than once at startup, so in a monorepo a package with its
+            -- own pin still wins over the workspace root's.
+            cmd = function(dispatchers, config)
+              local root = (config or {}).root_dir or vim.fn.getcwd()
+              local bin = root .. "/node_modules/.bin/" .. s.command
+              local argv = { vim.fn.executable(bin) == 1 and bin or s.command }
+              vim.list_extend(argv, s.args or {})
+              return vim.lsp.rpc.start(argv, dispatchers)
+            end,
+          })
+        end
+      end
+    end
+  end
+end
+
 vim.lsp.enable({
   "lua_ls", -- tarball
   "bashls",
