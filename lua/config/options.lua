@@ -3,6 +3,13 @@
 
 vim.o.termguicolors = true
 
+-- Modelines off: this editor opens DATA files (.ttl corpora, third-party
+-- packages) whose bytes routinely contain ` ex: <...>` — the legacy vi-era
+-- modeline introducer — so every such file threw E518 on open. Per-file
+-- settings belong to ftplugins here, and modelines' history is a parade of
+-- sandbox CVEs; nothing in this setup uses them.
+vim.o.modeline = false
+
 -- Indentation
 vim.o.shiftwidth = 0 -- Use tabstop value
 vim.o.softtabstop = -1 -- Use shiftwidth value
