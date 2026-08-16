@@ -18,6 +18,10 @@
 
 # Pin tag (human intent) AND digest (machine truth; tags mutable).
 # 26.04 == glibc base validated for nvim 0.12.3 + glibc project-tool mounts.
+# This is the multi-arch INDEX digest (verified against the registry
+# 2026-08-16: amd64+arm64 both under it), so each arch build resolves its own
+# base image — D14 protocol rule 2 already satisfied, do not re-pin to a
+# per-arch digest.
 ARG UBUNTU_DIGEST=sha256:53958ec7b67c2c9355df922dd08dbf0360611f8c3cdb656875e81873db9ffdba
 FROM ubuntu:26.04@${UBUNTU_DIGEST} AS runtime-root
 
@@ -42,42 +46,81 @@ RUN ln -s "$(command -v fdfind)" /usr/local/bin/fd
 
 # ---- BAKED TOOLCHAIN: pinned upstream release tarballs (URL + sha256) ----
 # Each download is sha256-verified; a mismatch FAILS THE BUILD.
+#
+# MULTI-ARCH (D14, docs/protocols/image-multiarch.md): every pinned tarball is
+# a PER-ARCH PAIR selected via TARGETARCH (BuildKit sets it: amd64/arm64). The
+# arm64 URLs+shas were verified on d1 (DGX Spark) 2026-08-16: each asset
+# downloaded, hashed, and EXECUTED natively (--version) before pinning; node's
+# sha cross-checked against nodejs.org SHASUMS256.txt. An unlisted arch fails
+# the build loudly, never falls through to an x86 binary (protocol rule 3).
+ARG TARGETARCH
 
 # neovim 0.12.3 — apt is 0.11.6 (too old for nvim-treesitter main, needs 0.12).
-ARG NVIM_URL=https://github.com/neovim/neovim/releases/download/v0.12.3/nvim-linux-x86_64.tar.gz
-ARG NVIM_SHA256=c441b547142860bf01bcce39e36cbed185c41112813e15443b16e5237750724d
-RUN curl -fsSL "$NVIM_URL" -o /tmp/nvim.tar.gz \
- && echo "${NVIM_SHA256}  /tmp/nvim.tar.gz" | sha256sum -c - \
+# The extracted top-level dir is arch-named, hence $dir in the case arms.
+ARG NVIM_URL_AMD64=https://github.com/neovim/neovim/releases/download/v0.12.3/nvim-linux-x86_64.tar.gz
+ARG NVIM_SHA256_AMD64=c441b547142860bf01bcce39e36cbed185c41112813e15443b16e5237750724d
+ARG NVIM_URL_ARM64=https://github.com/neovim/neovim/releases/download/v0.12.3/nvim-linux-arm64.tar.gz
+ARG NVIM_SHA256_ARM64=e055af73fa9c72b37456da8d204fa5c09850bc07e80e9176fe3b87d4afb7a3fc
+RUN set -eu; case "$TARGETARCH" in \
+      amd64) url="$NVIM_URL_AMD64"; sha="$NVIM_SHA256_AMD64"; dir=nvim-linux-x86_64 ;; \
+      arm64) url="$NVIM_URL_ARM64"; sha="$NVIM_SHA256_ARM64"; dir=nvim-linux-arm64 ;; \
+      *) echo "unsupported TARGETARCH: ${TARGETARCH:-unset}" >&2; exit 1 ;; \
+    esac \
+ && curl -fsSL "$url" -o /tmp/nvim.tar.gz \
+ && echo "$sha  /tmp/nvim.tar.gz" | sha256sum -c - \
  && tar -xzf /tmp/nvim.tar.gz -C /opt \
- && ln -s /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim \
+ && ln -s "/opt/$dir/bin/nvim" /usr/local/bin/nvim \
  && rm /tmp/nvim.tar.gz
 
 # node 24.17.0 LTS — official tarball (copilot.lua needs Node>=22; satisfied).
-ARG NODE_URL=https://nodejs.org/dist/v24.17.0/node-v24.17.0-linux-x64.tar.xz
-ARG NODE_SHA256=ab343a1b747c7cbf3630dfd7dbf818c5423fab2eb4f5ad1afc896f6bd121a917
-RUN curl -fsSL "$NODE_URL" -o /tmp/node.tar.xz \
- && echo "${NODE_SHA256}  /tmp/node.tar.xz" | sha256sum -c - \
+ARG NODE_URL_AMD64=https://nodejs.org/dist/v24.17.0/node-v24.17.0-linux-x64.tar.xz
+ARG NODE_SHA256_AMD64=ab343a1b747c7cbf3630dfd7dbf818c5423fab2eb4f5ad1afc896f6bd121a917
+ARG NODE_URL_ARM64=https://nodejs.org/dist/v24.17.0/node-v24.17.0-linux-arm64.tar.xz
+ARG NODE_SHA256_ARM64=67324b9e515e7d13da72571a5dd522bb23145a820f7dde15497897e466759ab3
+RUN set -eu; case "$TARGETARCH" in \
+      amd64) url="$NODE_URL_AMD64"; sha="$NODE_SHA256_AMD64"; dir=node-v24.17.0-linux-x64 ;; \
+      arm64) url="$NODE_URL_ARM64"; sha="$NODE_SHA256_ARM64"; dir=node-v24.17.0-linux-arm64 ;; \
+      *) echo "unsupported TARGETARCH: ${TARGETARCH:-unset}" >&2; exit 1 ;; \
+    esac \
+ && curl -fsSL "$url" -o /tmp/node.tar.xz \
+ && echo "$sha  /tmp/node.tar.xz" | sha256sum -c - \
  && tar -xJf /tmp/node.tar.xz -C /opt \
- && ln -s /opt/node-v24.17.0-linux-x64/bin/node /usr/local/bin/node \
- && ln -s /opt/node-v24.17.0-linux-x64/bin/npm  /usr/local/bin/npm \
- && ln -s /opt/node-v24.17.0-linux-x64/bin/npx  /usr/local/bin/npx \
+ && ln -s "/opt/$dir/bin/node" /usr/local/bin/node \
+ && ln -s "/opt/$dir/bin/npm"  /usr/local/bin/npm \
+ && ln -s "/opt/$dir/bin/npx"  /usr/local/bin/npx \
  && rm /tmp/node.tar.xz
 
-# stylua 2.5.2 — GitHub release glibc zip (NOT the -musl asset).
-ARG STYLUA_URL=https://github.com/JohnnyMorganz/StyLua/releases/download/v2.5.2/stylua-linux-x86_64.zip
-ARG STYLUA_SHA256=bcb0d855e91f102f28a370e850f8566b3b44b79e6274d806ea5246837c0fd5ab
-RUN curl -fsSL "$STYLUA_URL" -o /tmp/stylua.zip \
- && echo "${STYLUA_SHA256}  /tmp/stylua.zip" | sha256sum -c - \
+# stylua 2.5.2 — GitHub release glibc zip (NOT the -musl asset; arm64 asset is
+# named -aarch64, not -arm64 — upstream's convention, verified).
+ARG STYLUA_URL_AMD64=https://github.com/JohnnyMorganz/StyLua/releases/download/v2.5.2/stylua-linux-x86_64.zip
+ARG STYLUA_SHA256_AMD64=bcb0d855e91f102f28a370e850f8566b3b44b79e6274d806ea5246837c0fd5ab
+ARG STYLUA_URL_ARM64=https://github.com/JohnnyMorganz/StyLua/releases/download/v2.5.2/stylua-linux-aarch64.zip
+ARG STYLUA_SHA256_ARM64=0ef2ebf0b7e5a652b65c4cb96c6d9ffb3981a98547de3c764465bbf54a8d761a
+RUN set -eu; case "$TARGETARCH" in \
+      amd64) url="$STYLUA_URL_AMD64"; sha="$STYLUA_SHA256_AMD64" ;; \
+      arm64) url="$STYLUA_URL_ARM64"; sha="$STYLUA_SHA256_ARM64" ;; \
+      *) echo "unsupported TARGETARCH: ${TARGETARCH:-unset}" >&2; exit 1 ;; \
+    esac \
+ && curl -fsSL "$url" -o /tmp/stylua.zip \
+ && echo "$sha  /tmp/stylua.zip" | sha256sum -c - \
  && unzip -o /tmp/stylua.zip -d /usr/local/bin \
  && chmod +x /usr/local/bin/stylua \
  && rm /tmp/stylua.zip
 
-# lua-language-server 3.18.2 — GitHub release linux-x64 tarball (glibc).
-ARG LUALS_URL=https://github.com/LuaLS/lua-language-server/releases/download/3.18.2/lua-language-server-3.18.2-linux-x64.tar.gz
-ARG LUALS_SHA256=ca71415dd19f19e30aaa35a4915aefca9fdb5fec31b98331cc3d77f778d539c5
-RUN mkdir -p /opt/lua-language-server \
- && curl -fsSL "$LUALS_URL" -o /tmp/luals.tar.gz \
- && echo "${LUALS_SHA256}  /tmp/luals.tar.gz" | sha256sum -c - \
+# lua-language-server 3.18.2 — GitHub release tarball (glibc). Extracts into
+# the target dir directly (no arch-named top level), so only URL+sha vary.
+ARG LUALS_URL_AMD64=https://github.com/LuaLS/lua-language-server/releases/download/3.18.2/lua-language-server-3.18.2-linux-x64.tar.gz
+ARG LUALS_SHA256_AMD64=ca71415dd19f19e30aaa35a4915aefca9fdb5fec31b98331cc3d77f778d539c5
+ARG LUALS_URL_ARM64=https://github.com/LuaLS/lua-language-server/releases/download/3.18.2/lua-language-server-3.18.2-linux-arm64.tar.gz
+ARG LUALS_SHA256_ARM64=273af33f26f4a1143f27c96d9f9e1188aba619c71e0807042134f66b4bd27f24
+RUN set -eu; case "$TARGETARCH" in \
+      amd64) url="$LUALS_URL_AMD64"; sha="$LUALS_SHA256_AMD64" ;; \
+      arm64) url="$LUALS_URL_ARM64"; sha="$LUALS_SHA256_ARM64" ;; \
+      *) echo "unsupported TARGETARCH: ${TARGETARCH:-unset}" >&2; exit 1 ;; \
+    esac \
+ && mkdir -p /opt/lua-language-server \
+ && curl -fsSL "$url" -o /tmp/luals.tar.gz \
+ && echo "$sha  /tmp/luals.tar.gz" | sha256sum -c - \
  && tar -xzf /tmp/luals.tar.gz -C /opt/lua-language-server \
  && ln -s /opt/lua-language-server/bin/lua-language-server /usr/local/bin/lua-language-server \
  && rm /tmp/luals.tar.gz
@@ -138,10 +181,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && rm -rf /var/lib/apt/lists/*
 
 # tree-sitter-cli 0.26.9 from the GitHub release zip (pinned), NOT npm/apt.
-ARG TSCLI_URL=https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.9/tree-sitter-cli-linux-x64.zip
-ARG TSCLI_SHA256=0ea5daaef79145fe73786f0e3cdc43b62b22ddb36f7f6676c9f8bb72434d78e9
-RUN curl -fsSL "$TSCLI_URL" -o /tmp/ts.zip \
- && echo "${TSCLI_SHA256}  /tmp/ts.zip" | sha256sum -c - \
+# Per-arch pair (D14) — see the TARGETARCH block in runtime-root; ARG scoping
+# is per-stage, so TARGETARCH must be redeclared here.
+ARG TARGETARCH
+ARG TSCLI_URL_AMD64=https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.9/tree-sitter-cli-linux-x64.zip
+ARG TSCLI_SHA256_AMD64=0ea5daaef79145fe73786f0e3cdc43b62b22ddb36f7f6676c9f8bb72434d78e9
+ARG TSCLI_URL_ARM64=https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.9/tree-sitter-cli-linux-arm64.zip
+ARG TSCLI_SHA256_ARM64=8b6c0f53593ce17c7eb90eb08de5ffb9f513f3db585b1fbef12219cacf7e8a68
+RUN set -eu; case "$TARGETARCH" in \
+      amd64) url="$TSCLI_URL_AMD64"; sha="$TSCLI_SHA256_AMD64" ;; \
+      arm64) url="$TSCLI_URL_ARM64"; sha="$TSCLI_SHA256_ARM64" ;; \
+      *) echo "unsupported TARGETARCH: ${TARGETARCH:-unset}" >&2; exit 1 ;; \
+    esac \
+ && curl -fsSL "$url" -o /tmp/ts.zip \
+ && echo "$sha  /tmp/ts.zip" | sha256sum -c - \
  && unzip -o /tmp/ts.zip -d /usr/local/bin \
  && chmod +x /usr/local/bin/tree-sitter \
  && rm /tmp/ts.zip
