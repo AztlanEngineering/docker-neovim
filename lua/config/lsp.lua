@@ -44,7 +44,7 @@ if venv and not (":" .. vim.env.PATH .. ":"):find(":" .. venv .. "/bin:", 1, tru
 end
 
 -- Activate servers. Tool SOURCE model (glibc image — host glibc binaries run):
---   BAKED in image (always available): lua_ls (tarball), basedpyright, ts_ls,
+--   BAKED in image (always available): lua_ls (tarball), basedpyright, tsgo,
 --     bashls, yamlls, jsonls, html, cssls (npm).
 --   GUARDED (enable only when the binary resolves on PATH):
 --     rust_analyzer (host-tool: v3 mounts it from the host when present; also
@@ -100,7 +100,7 @@ vim.lsp.enable({
   "cssls",
   "jsonls",
   "html",
-  "tsgo", -- TS7 native, defined in lsp/tsgo.lua (was ts_ls — retired with tsserver)
+  "tsgo", -- TS7 native, after/lsp/tsgo.lua override (was ts_ls — retired with tsserver)
   "yamlls", -- npm
   "basedpyright", -- python types (always-on, baked)
 })
