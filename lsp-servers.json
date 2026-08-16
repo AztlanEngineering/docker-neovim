@@ -28,17 +28,26 @@
     "  nvim                vim.lsp.enable() name, or null if the image omits it",
     "  hostOnly            true = never baked into the image",
     "  extensionToLanguage Claude Code's required map. Values are LANGUAGE IDS",
-    "                      (LSP spec), not filetypes."
+    "                      (LSP spec), not filetypes.",
+    "",
+    "TYPESCRIPT 7 (2026-08-16): the native Go line. typescript-language-server is",
+    "RETIRED for this entry — TS7 ships no JS tsserver; the binary speaks LSP",
+    "itself (`tsc --lsp --stdio`). nixpkgs typescript-go ships tsc AND tsgo; the",
+    "npm package exposes bin/tsc — so `tsc` is the one command both host and",
+    "image resolve. preferLocal=false on purpose: a project-local OLD typescript",
+    "has no --lsp and would silently kill the server; the host daemon reads the",
+    "project tsconfig anyway. helix rides the same server via the command",
+    "override in core.nix. Image rebuild owed to bake the new pins (advl/nvim)."
   ],
   "servers": [
     {
       "id": "typescript",
-      "nixPackages": ["typescript-language-server", "typescript"],
-      "npm": ["typescript-language-server@5.3.0", "typescript@6.0.3"],
-      "command": "typescript-language-server",
-      "args": ["--stdio"],
-      "preferLocal": true,
-      "nvim": "ts_ls",
+      "nixPackages": ["typescript-go"],
+      "npm": ["typescript@7.0.2"],
+      "command": "tsc",
+      "args": ["--lsp", "--stdio"],
+      "preferLocal": false,
+      "nvim": "tsgo",
       "hostOnly": false,
       "extensionToLanguage": {
         ".ts": "typescript",
@@ -65,7 +74,7 @@
     {
       "id": "yaml",
       "nixPackages": ["yaml-language-server"],
-      "npm": ["yaml-language-server@1.23.0"],
+      "npm": ["yaml-language-server@1.24.0"],
       "command": "yaml-language-server",
       "args": ["--stdio"],
       "preferLocal": true,
@@ -109,7 +118,7 @@
     {
       "id": "python",
       "nixPackages": ["basedpyright"],
-      "npm": ["basedpyright@1.39.8"],
+      "npm": ["basedpyright@1.39.10"],
       "command": "basedpyright-langserver",
       "args": ["--stdio"],
       "preferLocal": true,

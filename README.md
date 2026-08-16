@@ -34,7 +34,7 @@ full contract and flags (`--host-tool`, `V3_HOST_TOOLS`, `NVIM_IMAGE`,
 - **Completion:** blink.cmp (Lua fuzzy, no binary) + Copilot as a toggleable
   source (`lua/config/ai.lua`).
 - **LSP:** native 0.12 `lsp/` directory idiom. Baked, always-on: lua_ls,
-  basedpyright (Python types), ts_ls/bashls/yamlls/jsonls/html/cssls (npm).
+  basedpyright (Python types), tsgo (TS7 native)/bashls/yamlls/jsonls/html/cssls (npm).
   Project/host tools (executable-guarded): ruff (venv), rust-analyzer + sem-lsp
   (host bind-mount).
 - **Tools:** treesitter parsers baked at build time; stylua/shfmt baked;

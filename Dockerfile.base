@@ -154,7 +154,8 @@ RUN set -eu; \
     npm i -g --no-fund --no-audit $pins \
  && npm cache clean --force \
  && rm -f /tmp/lsp-servers.json
-# typescript@6.0.3 is REQUIRED by ts_ls (tsls has NO runtime deps; ships no tsc).
+# typescript@7 (native Go line, 2026-08-16): ships bin/tsc which IS the LSP
+# (`tsc --lsp --stdio`); typescript-language-server is retired with tsserver.
 # vscode-langservers-extracted ALSO provides jsonls + html FREE (bin list).
 # basedpyright = always-on Python types/hover/goto (ruff lint/format = project venv).
 # NO ruff here (project venv only). NO gcompat (glibc).
@@ -349,7 +350,7 @@ RUN set -e; \
     for t in nvim git rg fd node npm \
              stylua shellcheck shfmt \
              lua-language-server \
-             typescript-language-server tsserver \
+             tsc \
              bash-language-server yaml-language-server \
              vscode-json-language-server vscode-css-language-server vscode-html-language-server \
              basedpyright; do \

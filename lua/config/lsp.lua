@@ -100,7 +100,7 @@ vim.lsp.enable({
   "cssls",
   "jsonls",
   "html",
-  "ts_ls",
+  "tsgo", -- TS7 native, defined in lsp/tsgo.lua (was ts_ls — retired with tsserver)
   "yamlls", -- npm
   "basedpyright", -- python types (always-on, baked)
 })
