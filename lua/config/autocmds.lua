@@ -1,24 +1,14 @@
--- Autocmds and runtime setup
+-- Autocmds and runtime setup.
+--
+-- (The venv PATH-prepend that used to live here moved to config.lsp, which runs
+-- earlier in init.lua and needs the venv on PATH before its executable() guards.
+-- The old BufWinEnter signcolumn='auto' reset was removed: signcolumn is set
+-- globally in options.lua and the reset only caused gutter-shift flicker.)
 
-local function augroup(name)
-  return vim.api.nvim_create_augroup("lazyvim_user_" .. name, { clear = true })
-end
-
--- Reset signcolumn on each new window
-vim.api.nvim_create_autocmd("BufWinEnter", {
-  group = augroup("MyAutoCmds"),
+-- Reflect yanked text briefly (0.12 idiom).
+vim.api.nvim_create_autocmd("TextYankPost", {
+  group = vim.api.nvim_create_augroup("user.yank", { clear = true }),
   callback = function()
-    vim.wo.signcolumn = "auto"
+    vim.hl.on_yank()
   end,
 })
-
--- Prepend virtualenv bin to PATH if active
-local function setup_venv_path()
-  local venv_path = os.getenv("VIRTUAL_ENV")
-  if venv_path then
-    local venv_bin = venv_path .. "/bin"
-    vim.env.PATH = venv_bin .. ":" .. vim.env.PATH
-  end
-end
-
-setup_venv_path()

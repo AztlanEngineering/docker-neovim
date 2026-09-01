@@ -1,0 +1,9 @@
+.git
+*.bak
+build.log
+logfile
+vimrc
+vimrc.*
+diagnostics.sh
+docs
+README.md

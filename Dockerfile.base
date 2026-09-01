@@ -1,0 +1,394 @@
+# syntax=docker/dockerfile:1.7
+########################################################################
+# fwrlines/nvim-base — heavy, rarely rebuilt, digest-pinned fleet artifact.
+# GLIBC base (Ubuntu 26.04 LTS). Re-based from Alpine/musl so project tools
+# (biome/ruff/venvs/sem-lsp/design-tokens LSP) mount-from-env and RUN natively
+# — host binaries are glibc, so the container must be glibc too.
+#
+# Rebuild ONLY for: ubuntu/nvim bump, a plugin-set change with a NATIVE build
+# (today only tree-sitter parsers), a parser-list change (lua/config/parsers.lua),
+# an npm tool-set bump, or a baked-tarball version bump. Every config-behavior
+# edit (keymaps/options/autocmds/preferences) lives in the thin Dockerfile and
+# does NOT rebuild this image.
+#
+# Diamond multi-stage: runtime-root -> builder (owns build-essential + tree-sitter-cli)
+#                                   -> final  (runtime-root + COPY --from=builder)
+# No compiler ever ships in `final`.
+########################################################################
+
+# Pin tag (human intent) AND digest (machine truth; tags mutable).
+# 26.04 == glibc base validated for nvim 0.12.3 + glibc project-tool mounts.
+# This is the multi-arch INDEX digest (verified against the registry
+# 2026-08-16: amd64+arm64 both under it), so each arch build resolves its own
+# base image — D14 protocol rule 2 already satisfied, do not re-pin to a
+# per-arch digest.
+ARG UBUNTU_DIGEST=sha256:53958ec7b67c2c9355df922dd08dbf0360611f8c3cdb656875e81873db9ffdba
+FROM ubuntu:26.04@${UBUNTU_DIGEST} AS runtime-root
+
+LABEL maintainer="fwrlines <hello@fwrlines.com>"
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ---- apt: ONLY basics + the native CLI formatters apt ships well ----
+# Everything version-load-bearing (nvim/node/stylua/lua_ls) comes
+# from pinned tarballs below, NOT apt. apt floats only within the digest-pinned
+# 26.04 release pocket. NO gcompat (glibc base). NO ruff (project venv). NO
+# neovim from apt (it's 0.11.6, too old for nvim-treesitter main).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      git curl bash \
+      ripgrep fd-find fzf \
+      python3 \
+      xz-utils unzip \
+      shellcheck shfmt \
+ && rm -rf /var/lib/apt/lists/*
+# Debian/Ubuntu name fd as `fdfind`; snacks.picker + the agent call `fd`.
+RUN ln -s "$(command -v fdfind)" /usr/local/bin/fd
+
+# ---- BAKED TOOLCHAIN: pinned upstream release tarballs (URL + sha256) ----
+# Each download is sha256-verified; a mismatch FAILS THE BUILD.
+#
+# MULTI-ARCH (D14, docs/protocols/image-multiarch.md): every pinned tarball is
+# a PER-ARCH PAIR selected via TARGETARCH (BuildKit sets it: amd64/arm64). The
+# arm64 URLs+shas were verified on d1 (DGX Spark) 2026-08-16: each asset
+# downloaded, hashed, and EXECUTED natively (--version) before pinning; node's
+# sha cross-checked against nodejs.org SHASUMS256.txt. An unlisted arch fails
+# the build loudly, never falls through to an x86 binary (protocol rule 3).
+ARG TARGETARCH
+
+# neovim 0.12.3 — apt is 0.11.6 (too old for nvim-treesitter main, needs 0.12).
+# The extracted top-level dir is arch-named, hence $dir in the case arms.
+ARG NVIM_URL_AMD64=https://github.com/neovim/neovim/releases/download/v0.12.3/nvim-linux-x86_64.tar.gz
+ARG NVIM_SHA256_AMD64=c441b547142860bf01bcce39e36cbed185c41112813e15443b16e5237750724d
+ARG NVIM_URL_ARM64=https://github.com/neovim/neovim/releases/download/v0.12.3/nvim-linux-arm64.tar.gz
+ARG NVIM_SHA256_ARM64=e055af73fa9c72b37456da8d204fa5c09850bc07e80e9176fe3b87d4afb7a3fc
+RUN set -eu; case "$TARGETARCH" in \
+      amd64) url="$NVIM_URL_AMD64"; sha="$NVIM_SHA256_AMD64"; dir=nvim-linux-x86_64 ;; \
+      arm64) url="$NVIM_URL_ARM64"; sha="$NVIM_SHA256_ARM64"; dir=nvim-linux-arm64 ;; \
+      *) echo "unsupported TARGETARCH: ${TARGETARCH:-unset}" >&2; exit 1 ;; \
+    esac \
+ && curl -fsSL "$url" -o /tmp/nvim.tar.gz \
+ && echo "$sha  /tmp/nvim.tar.gz" | sha256sum -c - \
+ && tar -xzf /tmp/nvim.tar.gz -C /opt \
+ && ln -s "/opt/$dir/bin/nvim" /usr/local/bin/nvim \
+ && rm /tmp/nvim.tar.gz
+
+# node 24.17.0 LTS — official tarball (copilot.lua needs Node>=22; satisfied).
+ARG NODE_URL_AMD64=https://nodejs.org/dist/v24.17.0/node-v24.17.0-linux-x64.tar.xz
+ARG NODE_SHA256_AMD64=ab343a1b747c7cbf3630dfd7dbf818c5423fab2eb4f5ad1afc896f6bd121a917
+ARG NODE_URL_ARM64=https://nodejs.org/dist/v24.17.0/node-v24.17.0-linux-arm64.tar.xz
+ARG NODE_SHA256_ARM64=67324b9e515e7d13da72571a5dd522bb23145a820f7dde15497897e466759ab3
+RUN set -eu; case "$TARGETARCH" in \
+      amd64) url="$NODE_URL_AMD64"; sha="$NODE_SHA256_AMD64"; dir=node-v24.17.0-linux-x64 ;; \
+      arm64) url="$NODE_URL_ARM64"; sha="$NODE_SHA256_ARM64"; dir=node-v24.17.0-linux-arm64 ;; \
+      *) echo "unsupported TARGETARCH: ${TARGETARCH:-unset}" >&2; exit 1 ;; \
+    esac \
+ && curl -fsSL "$url" -o /tmp/node.tar.xz \
+ && echo "$sha  /tmp/node.tar.xz" | sha256sum -c - \
+ && tar -xJf /tmp/node.tar.xz -C /opt \
+ && ln -s "/opt/$dir/bin/node" /usr/local/bin/node \
+ && ln -s "/opt/$dir/bin/npm"  /usr/local/bin/npm \
+ && ln -s "/opt/$dir/bin/npx"  /usr/local/bin/npx \
+ && rm /tmp/node.tar.xz
+
+# stylua 2.5.2 — GitHub release glibc zip (NOT the -musl asset; arm64 asset is
+# named -aarch64, not -arm64 — upstream's convention, verified).
+ARG STYLUA_URL_AMD64=https://github.com/JohnnyMorganz/StyLua/releases/download/v2.5.2/stylua-linux-x86_64.zip
+ARG STYLUA_SHA256_AMD64=bcb0d855e91f102f28a370e850f8566b3b44b79e6274d806ea5246837c0fd5ab
+ARG STYLUA_URL_ARM64=https://github.com/JohnnyMorganz/StyLua/releases/download/v2.5.2/stylua-linux-aarch64.zip
+ARG STYLUA_SHA256_ARM64=0ef2ebf0b7e5a652b65c4cb96c6d9ffb3981a98547de3c764465bbf54a8d761a
+RUN set -eu; case "$TARGETARCH" in \
+      amd64) url="$STYLUA_URL_AMD64"; sha="$STYLUA_SHA256_AMD64" ;; \
+      arm64) url="$STYLUA_URL_ARM64"; sha="$STYLUA_SHA256_ARM64" ;; \
+      *) echo "unsupported TARGETARCH: ${TARGETARCH:-unset}" >&2; exit 1 ;; \
+    esac \
+ && curl -fsSL "$url" -o /tmp/stylua.zip \
+ && echo "$sha  /tmp/stylua.zip" | sha256sum -c - \
+ && unzip -o /tmp/stylua.zip -d /usr/local/bin \
+ && chmod +x /usr/local/bin/stylua \
+ && rm /tmp/stylua.zip
+
+# lua-language-server 3.18.2 — GitHub release tarball (glibc). Extracts into
+# the target dir directly (no arch-named top level), so only URL+sha vary.
+ARG LUALS_URL_AMD64=https://github.com/LuaLS/lua-language-server/releases/download/3.18.2/lua-language-server-3.18.2-linux-x64.tar.gz
+ARG LUALS_SHA256_AMD64=ca71415dd19f19e30aaa35a4915aefca9fdb5fec31b98331cc3d77f778d539c5
+ARG LUALS_URL_ARM64=https://github.com/LuaLS/lua-language-server/releases/download/3.18.2/lua-language-server-3.18.2-linux-arm64.tar.gz
+ARG LUALS_SHA256_ARM64=273af33f26f4a1143f27c96d9f9e1188aba619c71e0807042134f66b4bd27f24
+RUN set -eu; case "$TARGETARCH" in \
+      amd64) url="$LUALS_URL_AMD64"; sha="$LUALS_SHA256_AMD64" ;; \
+      arm64) url="$LUALS_URL_ARM64"; sha="$LUALS_SHA256_ARM64" ;; \
+      *) echo "unsupported TARGETARCH: ${TARGETARCH:-unset}" >&2; exit 1 ;; \
+    esac \
+ && mkdir -p /opt/lua-language-server \
+ && curl -fsSL "$url" -o /tmp/luals.tar.gz \
+ && echo "$sha  /tmp/luals.tar.gz" | sha256sum -c - \
+ && tar -xzf /tmp/luals.tar.gz -C /opt/lua-language-server \
+ && ln -s /opt/lua-language-server/bin/lua-language-server /usr/local/bin/lua-language-server \
+ && rm /tmp/luals.tar.gz
+
+# rust-analyzer: NOT baked. It's a project-versioned tool -> host-tool (TOOL POLICY,
+# PLAN-DECISIONS #12): v3 bind-mounts it from the host ~/.cargo/bin when present.
+# Baking it caused silent drift + it was dead anyway (needs rustc, never baked).
+
+# ---- pinned npm LSP servers, FROM THE REGISTRY ------------------------------
+# The pins are no longer written here. lsp-servers.json is the fleet's LSP
+# registry, vendored from df (nix/lsp/servers.json) the same way v3.sh is
+# vendored in the other direction — ONE file, four consumers: this image, df's
+# host packages (core.nix), Claude Code's generated plugin (ai.nix), and the
+# prefer_local resolver in lua/config/lsp.lua.
+#
+# It replaces a hand-written list whose df counterpart claimed in a comment to
+# "mirror" it. That mirror had already broken: basedpyright was 1.39.8 here
+# against 1.39.3 on the host (measured 2026-08-03). A list two files must keep
+# equal by hand is a list that will diverge.
+#
+# node, not jq: node is installed above and jq is not, so this costs no extra
+# apt layer. `new Set` because several servers ship in ONE package
+# (vscode-langservers-extracted carries json+html+css) and npm should be asked
+# once. Servers with "npm": null are skipped — lua_ls is a tarball below, nil is
+# host-only.
+ENV NPM_CONFIG_PREFIX=/usr/local
+COPY lsp-servers.json /tmp/lsp-servers.json
+RUN set -eu; \
+    pins="$(node -e 'const j=require("/tmp/lsp-servers.json"); const p=[...new Set(j.servers.filter(s=>s.npm).flatMap(s=>s.npm))]; if(!p.length){console.error("ASSERT FAIL: registry yielded no npm pins"); process.exit(1)} console.log(p.join(" "))')"; \
+    echo "installing LSP servers from registry: $pins"; \
+    npm i -g --no-fund --no-audit $pins \
+ && npm cache clean --force \
+ && rm -f /tmp/lsp-servers.json
+# typescript@7 (native Go line, 2026-08-16): ships bin/tsc which IS the LSP
+# (`tsc --lsp --stdio`); typescript-language-server is retired with tsserver.
+# vscode-langservers-extracted ALSO provides jsonls + html FREE (bin list).
+# basedpyright = always-on Python types/hover/goto (ruff lint/format = project venv).
+# NO ruff here (project venv only). NO gcompat (glibc).
+
+# ---- user (uid 1000 == host; /x mount ownership depends on it) ----
+# Ubuntu 26.04 ships a default `ubuntu` user at uid 1000 (24.04+). Reuse the uid,
+# rename to myuser, move HOME. (Alt if the default user is ever dropped:
+#   RUN userdel -r ubuntu 2>/dev/null || true; useradd -m -u 1000 myuser )
+RUN usermod -l myuser -d /home/myuser -m ubuntu \
+ && groupmod -n myuser ubuntu
+ENV HOME=/home/myuser
+# tarball+npm bins first; project-local node bins APPENDED (a mounted repo at /x
+# must not shadow git/node/rg for the agent session).
+ENV PATH="/usr/local/bin:$PATH:./node_modules/.bin"
+
+########################################################################
+# builder: the ONLY stage that owns a compiler. Its debris never ships.
+########################################################################
+FROM runtime-root AS builder
+
+# The parser-compiler set. build-essential = gcc/g++/make/libc-dev (glibc).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential \
+ && rm -rf /var/lib/apt/lists/*
+
+# tree-sitter-cli 0.26.9 from the GitHub release zip (pinned), NOT npm/apt.
+# Per-arch pair (D14) — see the TARGETARCH block in runtime-root; ARG scoping
+# is per-stage, so TARGETARCH must be redeclared here.
+ARG TARGETARCH
+ARG TSCLI_URL_AMD64=https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.9/tree-sitter-cli-linux-x64.zip
+ARG TSCLI_SHA256_AMD64=0ea5daaef79145fe73786f0e3cdc43b62b22ddb36f7f6676c9f8bb72434d78e9
+ARG TSCLI_URL_ARM64=https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.9/tree-sitter-cli-linux-arm64.zip
+ARG TSCLI_SHA256_ARM64=8b6c0f53593ce17c7eb90eb08de5ffb9f513f3db585b1fbef12219cacf7e8a68
+RUN set -eu; case "$TARGETARCH" in \
+      amd64) url="$TSCLI_URL_AMD64"; sha="$TSCLI_SHA256_AMD64" ;; \
+      arm64) url="$TSCLI_URL_ARM64"; sha="$TSCLI_SHA256_ARM64" ;; \
+      *) echo "unsupported TARGETARCH: ${TARGETARCH:-unset}" >&2; exit 1 ;; \
+    esac \
+ && curl -fsSL "$url" -o /tmp/ts.zip \
+ && echo "$sha  /tmp/ts.zip" | sha256sum -c - \
+ && unzip -o /tmp/ts.zip -d /usr/local/bin \
+ && chmod +x /usr/local/bin/tree-sitter \
+ && rm /tmp/ts.zip
+
+USER 1000:1000
+WORKDIR /home/myuser
+RUN mkdir -p /home/myuser/.config/nvim/lua/config
+
+# --- COPY ORDER (cache geometry): rarely-changed + resolution-affecting first ---
+COPY --chown=1000:1000 init.lua stylua.toml nvim-pack-lock.json /home/myuser/.config/nvim/
+# plugins.lua IS the spec (the plugin list) AND a config file: resolution-affecting,
+# so it is real + early. Editing it busts the install layer (intended).
+COPY --chown=1000:1000 lua/config/plugins.lua /home/myuser/.config/nvim/lua/config/plugins.lua
+# ai.lua is read at SPEC-PARSE time (gates which specs exist) — real, not a stub.
+COPY --chown=1000:1000 lua/config/ai.lua /home/myuser/.config/nvim/lua/config/ai.lua
+# parsers.lua is read by the bake script AND treesitter.lua — real, before baking.
+COPY --chown=1000:1000 lua/config/parsers.lua /home/myuser/.config/nvim/lua/config/parsers.lua
+# icons.lua is required BY plugins.lua at spec-parse time ([cozette-icons]:
+# `local icons = require("config.icons")`, then icons.devicons() / icons.snacks),
+# so it must be REAL and it must land before the plugin layer.
+#
+# THIS WAS A LATENT BREAK, found 2026-08-03 the first time the base was rebuilt
+# after [cozette-icons] landed: icons.lua was in neither the COPY list nor the
+# stub list, so `require("config.icons")` failed and took the whole plugin +
+# parser bake down with it ("nvim-treesitter not on runtimepath"). The THIN
+# image never noticed — it copies the entire lua/ tree. Only a base rebuild can
+# surface a gap like this, and the base is rebuilt rarely.
+#
+# A STUB WOULD NOT DO: an empty module makes `require` return true, and the very
+# next line indexes it (icons.devicons()), so it must be the real file.
+COPY --chown=1000:1000 lua/config/icons.lua /home/myuser/.config/nvim/lua/config/icons.lua
+
+# Stub behavior-only config files so editing a keymap never busts install/bake.
+# lsp.lua is stubbed too: init.lua requires config.lsp at startup (the build
+# passes boot nvim), but it only ENABLES servers at runtime — no build value, and
+# stubbing keeps an enable-list edit from busting the install/bake layers.
+RUN touch /home/myuser/.config/nvim/lua/config/options.lua \
+          /home/myuser/.config/nvim/lua/config/autocmds.lua \
+          /home/myuser/.config/nvim/lua/config/keymaps.lua \
+          /home/myuser/.config/nvim/lua/config/preferences.lua \
+          /home/myuser/.config/nvim/lua/config/lsp.lua \
+          /home/myuser/.config/nvim/lua/config/tools.lua
+
+# ---- ASSERT: every config module plugins.lua requires actually exists -------
+# The COPY list above (real modules) and the touch list (stubs) together have to
+# cover every `require("config.X")` in plugins.lua. Nothing enforced that, and it
+# broke: [cozette-icons] added `require("config.icons")` and icons.lua was in
+# NEITHER list, so the base failed — two steps later, as
+# "nvim-treesitter not on runtimepath", which points at the wrong thing entirely
+# (found 2026-08-03, the first base rebuild after that change).
+#
+# The thin image cannot catch this: it copies the whole lua/ tree. Only the base
+# splits real-vs-stub, so only the base can drift, and it is rebuilt rarely
+# enough that the gap sat unnoticed. Fails HERE now, naming the missing module.
+RUN cd /home/myuser/.config/nvim && \
+    missing=""; \
+    for m in $(grep -oE 'require\("config\.[a-z_]+"\)' lua/config/plugins.lua \
+               | sed 's/require("config\.//; s/")//' | sort -u); do \
+      [ -f "lua/config/$m.lua" ] || missing="$missing $m"; \
+    done; \
+    if [ -n "$missing" ]; then \
+      echo "ASSERT FAIL: plugins.lua requires config module(s) the base never provides:$missing"; \
+      echo "  -> add a real COPY (if used at spec-parse time) or a stub to the touch list above"; \
+      exit 1; \
+    fi; \
+    echo "config modules required by plugins.lua: all present"
+
+# ---- PLUGIN LAYER (vim.pack) ----
+# Sourcing config.plugins runs vim.pack.add(specs,{confirm=false}) which BLOCKS
+# (clones all in parallel, waits) and HONORS the committed nvim-pack-lock.json
+# (locked revision wins over `version`). confirm=false prevents the headless y/n
+# hang. The trailing update(target='lockfile',force) re-checks-out every plugin to
+# the lock — defensive against the commit-pin checkout bug (#36037); a wrong
+# treesitter rev is then caught by the final-stage assertion.
+RUN nvim --headless \
+      -c 'lua require("config.plugins")' \
+      -c 'lua vim.pack.update(nil, { force = true, target = "lockfile" })' \
+      -c 'qa'
+
+# ---- ASSERT: the committed lockfile covers every installed plugin -----------
+# A spec added to plugins.lua WITHOUT regenerating nvim-pack-lock.json installs
+# fine here, then fails at every nvim start: vim.pack finds no locked revision,
+# reaches for git to resolve one, and the .git dirs are stripped below (-190MB)
+# -> "fatal: not a git repository". The message names neither the plugin nor the
+# lockfile, so it reads like a broken image.
+#
+# That is exactly what [tidal-rig] did: vim-tidal went into the specs and the
+# lock stayed at 15 entries against 16 specs (found 2026-08-03). The running
+# image was fine because it predated the spec; only a rebuild exposed it.
+#
+# Compares INSTALLED DIRECTORIES against the lock rather than counting spec
+# lines, because the copilot specs are conditional (config.ai gates them) — a
+# line count would be wrong whenever copilot is off.
+RUN node -e ' \
+  const fs = require("fs"); \
+  const lock = Object.keys(require("/home/myuser/.config/nvim/nvim-pack-lock.json").plugins); \
+  const dir = "/home/myuser/.local/share/nvim/site/pack/core/opt"; \
+  const installed = fs.readdirSync(dir); \
+  const missing = installed.filter((p) => !lock.includes(p)); \
+  if (missing.length) { \
+    console.error("ASSERT FAIL: installed but absent from nvim-pack-lock.json: " + missing.join(", ")); \
+    console.error("  -> regenerate the lock and commit it, or vim.pack will git-resolve it at every startup"); \
+    process.exit(1); \
+  } \
+  console.log("lockfile covers all " + installed.length + " installed plugins"); \
+'
+
+# ---- PARSER BAKE (the one native build) ----
+# Synchronous, serial, asserted (build/install-parsers.lua). Uses the glibc gcc
+# (build-essential) + the pinned tree-sitter-cli. Lands in
+# ~/.local/share/nvim/site/parser/*.so. Hard-fails the build on a missing parser.
+COPY --chown=1000:1000 build/install-parsers.lua /tmp/install-parsers.lua
+# vim.pack installs to site/pack/core/opt/* (opt = not on rtp until add()). Source
+# config.plugins first so nvim-treesitter is packadd'd + on rtp, THEN run the
+# synchronous parser bake (its own :wait() still essential — install() is async).
+RUN nvim --headless \
+      -c 'lua require("config.plugins")' \
+      -c 'luafile /tmp/install-parsers.lua' \
+ && rm /tmp/install-parsers.lua
+
+# (A baked lua_ls warm-meta cache was tried and reverted — lua_ls --check didn't
+#  reliably materialize meta at build time and an empty --metapath broke attach.
+#  The LSP-attach assertion in the final stage caught it. ~4.5s first-index per
+#  --rm is accepted; after/lsp/lua_ls.lua uses the ephemeral cache metapath.)
+
+# ---- strip .git from baked plugins (drive-by, -~190MB) ----
+# The image never updates plugins (vim.pack restores from the committed lockfile),
+# so each plugin's .git is dead weight. copilot.lua alone carries ~152MB of it.
+RUN find /home/myuser/.local/share/nvim/site/pack/core/opt -type d -name .git -exec rm -rf {} + 2>/dev/null; true
+
+########################################################################
+# final: runtime-root + built artifacts. No compiler. This is the shipped image.
+########################################################################
+FROM runtime-root AS final
+ARG GIT_SHA=unknown
+LABEL org.opencontainers.image.source="https://github.com/AztlanEngineering/docker-neovim" \
+      org.opencontainers.image.revision="${GIT_SHA}"
+
+USER 1000:1000
+WORKDIR /home/myuser
+
+# ONE data copy covers vim.pack plugins (site/pack/core/opt/*, incl. the
+# nvim-treesitter query corpus) and site/parser/*.so — all under data/.
+# (No mason/ dir — Mason removed; no lazy/ dir — lazy.nvim replaced by vim.pack.)
+COPY --from=builder --chown=1000:1000 \
+     /home/myuser/.local/share/nvim /home/myuser/.local/share/nvim
+COPY --from=builder --chown=1000:1000 \
+     /home/myuser/.config/nvim /home/myuser/.config/nvim
+
+# ---- BUILD-TIME ASSERTIONS: fail HERE, not three weeks later mid-edit. ----
+RUN set -e; \
+    for t in nvim git rg fd node npm \
+             stylua shellcheck shfmt \
+             lua-language-server \
+             tsc \
+             bash-language-server yaml-language-server \
+             vscode-json-language-server vscode-css-language-server vscode-html-language-server \
+             basedpyright; do \
+      command -v "$t" >/dev/null || { printf 'ASSERT FAIL: tool not found: %s\n' "$t"; exit 1; }; \
+    done; \
+    nvim --version | head -1 | grep -Eq 'v0\.12\.' || { echo 'ASSERT FAIL: nvim not 0.12.x'; exit 1; }; \
+    ! command -v gcompat >/dev/null || { echo 'ASSERT FAIL: gcompat present (delete on glibc)'; exit 1; }; \
+    ! command -v ruff >/dev/null    || { echo 'ASSERT FAIL: ruff baked (must be project venv)'; exit 1; }; \
+    ! command -v rust-analyzer >/dev/null || { echo 'ASSERT FAIL: rust-analyzer baked (now a host-tool)'; exit 1; }; \
+    ! command -v gcc >/dev/null         || { echo 'ASSERT FAIL: gcc shipped in final'; exit 1; }; \
+    ! command -v tree-sitter >/dev/null || { echo 'ASSERT FAIL: tree-sitter shipped in final'; exit 1; }
+RUN nvim --headless -c 'lua \
+      local ok = #vim.api.nvim_get_runtime_file("parser/lua.so", false) > 0; \
+      if not ok then io.stderr:write("ASSERT FAIL: parsers not baked\n"); vim.cmd("cquit 1") end; \
+      vim.cmd("qa")'
+# vim.pack assertions: plugins present, treesitter pinned to the exact archived rev
+# (catches the commit-pin checkout bug), :Trouble registered, iceberg active.
+# MUST gate the build: a bare `assert` in -c errors but nvim continues to +qa and
+# exits 0 (the assertion would be a no-op). Wrap in pcall + cquit 1 so a failure
+# turns the build RED (same idiom as build/install-parsers.lua).
+RUN nvim --headless -c 'lua \
+      local ok, err = pcall(function() \
+        local n, ts = 0, nil; \
+        for _, p in ipairs(vim.pack.get()) do n = n + 1; if p.spec.name == "nvim-treesitter" then ts = p.rev end end; \
+        assert(n >= 13, "too few plugins: " .. n); \
+        assert(ts == "4916d6592ede8c07973490d9322f187e07dfefac", "treesitter rev wrong: " .. tostring(ts)); \
+        assert(vim.fn.exists(":Trouble") == 2, ":Trouble not registered (load=true?)"); \
+        assert(vim.g.colors_name == "iceberg", "colorscheme not iceberg"); \
+      end); \
+      if not ok then io.stderr:write("ASSERT FAIL: " .. tostring(err) .. "\n"); vim.cmd("cquit 1") end; \
+      vim.cmd("qa")'
+
+# (stylua gate runs in the THIN Dockerfile, where the full config — incl. lsp/ and
+#  after/ — is present. The base only carries init.lua + lua/.)
+
+# (The LSP-attach assertion lives in the THIN Dockerfile: the base ships STUB
+#  config files — lsp.lua is empty here, so vim.lsp.enable never runs and lua_ls
+#  wouldn't attach in the base. The thin image has the real config.)
+
+WORKDIR /x/
+ENTRYPOINT ["nvim"]
